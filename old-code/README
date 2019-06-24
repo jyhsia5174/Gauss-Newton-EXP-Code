@@ -1,0 +1,56 @@
+A. The files in our package
+    1. fm_train: the implementation of our training algorithm
+    2. fm_predict: the script to do prediction given a model
+    3. libsvmread.c: the source of a MEX function to read data set in LIBSVM format
+    4. make.m: the script to compile libsvmread.c
+    5. fourclass_scale.tr: an example training set 
+    6. fourclass_scale.te: an example test set
+
+B. Usage
+    See fm_train.m and fm_predict.m for the training and prediction modules, respectively.
+
+C. Steps to run the code
+    1. Switch to the ``code'' directory
+        > cd code
+    1. Lunch MATLAB or OCTAVE command line
+        > matlab
+        or
+        > octave
+    2. Execute the demo case.
+        >> example
+
+D. Trouble shooting for executing make.m
+    If make.m does not work on MATLAB (especially for Windows), try 'mex
+    -setup' to choose a suitable compiler for mex. Make sure your compiler
+    is accessible and workable. Then type 'make' to start the
+    installation.
+
+    Example:
+
+            matlab>> mex -setup
+            (ps: MATLAB will show the following messages to setup default compiler.)
+            Please choose your compiler for building external interface (MEX) files:
+            Would you like mex to locate installed compilers [y]/n? y
+            Select a compiler:
+            [1] Microsoft Visual C/C++ version 7.1 in C:\Program Files\Microsoft Visual Studio
+            [0] None
+            Compiler: 1
+            Please verify your choices:
+            Compiler: Microsoft Visual C/C++ 7.1
+            Location: C:\Program Files\Microsoft Visual Studio
+            Are these correct?([y]/n): y
+
+            matlab>> make
+
+    On Unix systems, if neither make.m nor 'mex -setup' works, please use
+    Makefile and type 'make' in a command window. Note that we assume
+    your MATLAB is installed in '/usr/local/matlab'. If not, please change
+    MATLABDIR in Makefile.
+
+    Example:
+            linux> make
+
+    For a list of supported/compatible compilers for MATLAB, please check
+    the following page:
+
+    http://www.mathworks.com/support/compilers/current_release/

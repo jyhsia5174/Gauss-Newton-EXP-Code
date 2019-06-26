@@ -56,12 +56,10 @@ static char* readline(FILE *input)
 // read in a problem (in libsvm format)
 void read_problem(const char *filename, int nlhs, mxArray *plhs[])
 {
-	int max_index, min_index, inst_max_index;
-	size_t elements, k, i, l=0;
+	int max_user_id=0, max_item_id=0;
+	size_t l=0;
 	FILE *fp = fopen(filename,"r");
-	char *endptr;
-	mwIndex *ir, *jc;
-	double *labels, *samples;
+	double *user_feats, *item_feats, *scores;
 
 	if(fp == NULL)
 	{
@@ -73,116 +71,59 @@ void read_problem(const char *filename, int nlhs, mxArray *plhs[])
 	max_line_len = 1024;
 	line = (char *) malloc(max_line_len*sizeof(char));
 
-	max_index = 0;
-	min_index = 1; // our index starts from 1
-	elements = 0;
 	while(readline(fp) != NULL)
 	{
-		char *idx, *val;
-		// features
-		int index = 0;
+		char *u_id, *i_id, *score;
+		int user_id, item_id; 
 
-		inst_max_index = -1; // strtol gives 0 if wrong format, and precomputed kernel has <index> start from 0
-		strtok(line," \t"); // label
-		while (1)
-		{
-			idx = strtok(NULL,":"); // index:value
-			val = strtok(NULL," \t");
-			if(val == NULL)
-				break;
+		u_id = strtok(line," \t");
+		i_id = strtok(NULL," \t");
+		score = strtok(NULL," \t");
 
-			errno = 0;
-			index = (int) strtol(idx,&endptr,10);
-			if(endptr == idx || errno != 0 || *endptr != '\0' || index <= inst_max_index)
-			{
-				mexPrintf("Wrong input format at line %d\n",l+1);
-				fake_answer(nlhs, plhs);
-				return;
-			}
-			else
-				inst_max_index = index;
+		user_id = atoi(u_id);
+		item_id = atoi(i_id);
 
-			min_index = min(min_index, index);
-			elements++;
-		}
-		max_index = max(max_index, inst_max_index);
+		max_user_id = max(user_id, max_user_id);
+		max_item_id = max(item_id, max_item_id);
 		l++;
 	}
 	rewind(fp);
 
 	// y
 	plhs[0] = mxCreateDoubleMatrix(l, 1, mxREAL);
-	// x^T
-	if (min_index <= 0)
-		plhs[1] = mxCreateSparse(max_index-min_index+1, l, elements, mxREAL);
-	else
-		plhs[1] = mxCreateSparse(max_index, l, elements, mxREAL);
+	// U
+	plhs[1] = mxCreateDoubleMatrix(l, max_user_id, mxREAL);
+	// V
+	plhs[2] = mxCreateDoubleMatrix(l, max_item_id, mxREAL);
 
-	labels = mxGetPr(plhs[0]);
-	samples = mxGetPr(plhs[1]);
-	ir = mxGetIr(plhs[1]);
-	jc = mxGetJc(plhs[1]);
+	scores = mxGetPr(plhs[0]);
+	user_feats = mxGetPr(plhs[1]);
+	item_feats = mxGetPr(plhs[2]);
 
-	k=0;
-	for(i=0;i<l;i++)
+	int i = 0;
+	while(readline(fp) != NULL)
 	{
-		char *idx, *val, *label;
-		jc[i] = k;
+		char *u_id, *i_id, *score;
+		int user_id, item_id;
+		double d_score; 
 
-		readline(fp);
+		u_id = strtok(line," \t");
+		i_id = strtok(NULL," \t");
+		score = strtok(NULL," \t");
 
-		label = strtok(line," \t\n");
-		if(label == NULL)
-		{
-			mexPrintf("Empty line at line %d\n",i+1);
-			fake_answer(nlhs, plhs);
-			return;
-		}
-		labels[i] = strtod(label,&endptr);
-		if(endptr == label || *endptr != '\0')
-		{
-			mexPrintf("Wrong input format at line %d\n",i+1);
-			fake_answer(nlhs, plhs);
-			return;
-		}
+		user_id = atoi(u_id);
+		item_id = atoi(i_id);
+		d_score = atof(score);
 
-		// features
-		while(1)
-		{
-			idx = strtok(NULL,":");
-			val = strtok(NULL," \t");
-			if(val == NULL)
-				break;
+		user_feats[(user_id-1)*l + i] = 1;
+		item_feats[(item_id-1)*l + i] = 1;
+		scores[i] = d_score;
 
-			ir[k] = (mwIndex) (strtol(idx,&endptr,10) - min_index); // precomputed kernel has <index> start from 0
-
-			errno = 0;
-			samples[k] = strtod(val,&endptr);
-			if (endptr == val || errno != 0 || (*endptr != '\0' && !isspace(*endptr)))
-			{
-				mexPrintf("Wrong input format at line %d\n",i+1);
-				fake_answer(nlhs, plhs);
-				return;
-			}
-			++k;
-		}
+		i++;
 	}
-	jc[l] = k;
 
 	fclose(fp);
 	free(line);
-
-	{
-		mxArray *rhs[1], *lhs[1];
-		rhs[0] = plhs[1];
-		if(mexCallMATLAB(1, lhs, 1, rhs, "transpose"))
-		{
-			mexPrintf("Error: cannot transpose problem\n");
-			fake_answer(nlhs, plhs);
-			return;
-		}
-		plhs[1] = lhs[0];
-	}
 }
 
 void mexFunction( int nlhs, mxArray *plhs[],
@@ -190,7 +131,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 {
 	char filename[256];
 
-	if(nrhs != 1 || nlhs != 2)
+	if(nrhs != 1 || nlhs != 3)
 	{
 		exit_with_help();
 		fake_answer(nlhs, plhs);

@@ -1,4 +1,4 @@
-function [w, U, V] = fm_train(y, W, H, lambda_W, lambda_H, d, epsilon, do_pcond)
+function [w, U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
@@ -37,14 +37,14 @@ function [w, U, V] = fm_train(y, W, H, lambda_W, lambda_H, d, epsilon, do_pcond)
     for k = 1:max_iter
         [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, lambda_U, do_pcond);
         [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, lambda_V, do_pcond);
-        G_norm = norm([G_norm_w, G_norm_U, G_norm_V]);
+        G_norm = norm([G_norm_U, G_norm_V]);
         if (k == 1)
             G_norm_0 = G_norm;
         end
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
-        fprintf('%4d  %11.3f  %14.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)\n', k, toc, f, G_norm, G_norm_w, nt_iters_w, cg_iters_w, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V);
+        fprintf('%4d  %11.3f  %14.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -74,8 +74,7 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         if (k == max_nt_iter)
             fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         end
-        D = sparse([1:l], [1:l], 1);
-        [S, cg_iters] = pcg(W, Q, G, D, lambda, do_pcond);
+        [S, cg_iters] = pcg(W, Q, G, lambda);
         total_cg_iters = total_cg_iters+cg_iters;
 
         Delta = (sum(Q'.*(W*S'),2));
@@ -104,10 +103,9 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
 end
 
 % See Algorithm 4 in the paper.
-function [S, cg_iters] = pcg(W, Q, G, D, lambda)
-    zeta = 0.3;
+function [S, cg_iters] = pcg(W, Q, G, lambda)
+    zeta = 0.01;
     cg_max_iter = 100;
-
     l = size(W,1);
     s_bar = zeros(size(G));
     M = ones(size(G));
@@ -120,7 +118,7 @@ function [S, cg_iters] = pcg(W, Q, G, D, lambda)
         cg_iters = cg_iters+1;
         Dh = M.*d;
         z = sum(Q'.*(W*Dh'),2);
-        Dh = M.*(lambda*Dh+Q*sparse([1:l], [1:l], D*z)*W);
+        Dh = M.*(lambda*Dh+Q*sparse([1:l], [1:l], z)*W);
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;
         r = r-alpha*Dh;

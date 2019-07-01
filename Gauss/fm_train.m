@@ -1,4 +1,4 @@
-function [w, U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
+function [U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
@@ -28,12 +28,12 @@ function [w, U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
     y_tilde = (sum((U*W').*(V*H'),1))';
 
     b = y_tilde-y;
-    loss = sum(b.*b);
+    loss = 0.5*sum(b.*b);
 
-    f = lambda_U*sum(sum(U.*U))+lambda_V*sum(sum(V.*V))+loss;
+    f = 0.5*lambda_U*sum(sum(U.*U))+lambda_V*sum(sum(V.*V))+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|           |gradw| (#nt,#cg)           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)\n');
+    fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)\n');
     for k = 1:max_iter
         [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, lambda_U, do_pcond);
         [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, lambda_V, do_pcond);
@@ -54,9 +54,7 @@ end
 % See Algorithm 3 in the paper. 
 function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_block(y, W, U, Q, y_tilde, b, f, loss, lambda, do_pcond)
     epsilon = 0.8;
-    nu = 0.1;
     max_nt_iter = 100;
-    min_step_size = 1e-20;
     l = size(W,1);
     G0_norm = 0;
     total_cg_iters = 0;
@@ -78,47 +76,32 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         total_cg_iters = total_cg_iters+cg_iters;
 
         Delta = (sum(Q'.*(W*S'),2));
-        US = sum(sum(U.*S)); SS = sum(sum(S.*S)); GS = sum(sum(G.*S));
-        theta = 1;
-        while (true)
-            if (theta < min_step_size)
-                fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
-                return;
-            end
-            y_tilde_new = y_tilde+theta*Delta;
-            b_new = y_tilde_new - y;
-            loss_new = sum(b .* b);
-            f_diff = lambda*(2*theta*US+theta*theta*SS)+loss_new-loss;
-            if (f_diff <= nu*theta*GS)
-                loss = loss_new;
-                f = f+f_diff;
-                U = U+theta*S;
-                y_tilde = y_tilde_new;
-                b = b_new;
-                break;
-            end
-            theta = theta*0.5;
-        end
+        US = sum(sum(U.*S)); SS = sum(sum(S.*S));
+        y_tilde = y_tilde+Delta;
+        b = y_tilde - y;
+        loss_new = 0.5*sum(b .* b);
+        f_diff = 0.5*lambda*(2*US+SS)+loss_new-loss;
+        loss = loss_new;
+        f = f+f_diff;
+        U = U+S;
     end
 end
 
 % See Algorithm 4 in the paper.
 function [S, cg_iters] = pcg(W, Q, G, lambda)
-    zeta = 0.01;
+    zeta = 1e-2;
     cg_max_iter = 100;
     l = size(W,1);
     s_bar = zeros(size(G));
-    M = ones(size(G));
-    r = -M.*G;
+    r = -G;
     d = r;
     G0G0 = sum(sum(r.*r));
     gamma = G0G0;
     cg_iters = 0;
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
-        Dh = M.*d;
-        z = sum(Q'.*(W*Dh'),2);
-        Dh = M.*(lambda*Dh+Q*sparse([1:l], [1:l], z)*W);
+        z = sum(Q'.*(W*d'),2);
+        Dh = lambda*d+Q*sparse([1:l], [1:l], z)*W;
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;
         r = r-alpha*Dh;
@@ -131,5 +114,5 @@ function [S, cg_iters] = pcg(W, Q, G, lambda)
             break;
         end
     end
-    S = M.*s_bar;
+    S = s_bar;
 end

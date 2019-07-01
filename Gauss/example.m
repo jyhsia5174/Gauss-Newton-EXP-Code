@@ -2,10 +2,10 @@
 make;
 
 % set model parameters
-lambda_U = 128; lambda_V = 128; d = 40;
+lambda_U = 128; lambda_V = 128; d = 4;
 
 % set training algorithm's parameters
-epsilon = 0.01; do_pcond = false;
+epsilon = 1e-6; do_pcond = false;
 
 % prepare training and test data sets
 [y, W, H] = libsvmread('./ml/ml.tr');
@@ -25,7 +25,7 @@ H = sparse(i,j,s,size(H,1),n);
 H_test = sparse(i,j,s,size(H_test,1),n);
 
 % learn an FM model
-[w, U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond);
+[U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

@@ -70,15 +70,15 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         if (k == max_nt_iter)
             fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         end
-        [S, cg_iters] = cg(W, H, P, Q, G, lambda);
+        [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda);
         total_cg_iters = total_cg_iters+cg_iters;
 
-        WS_u = (W*S(1:end, 1:m)');
-        HS_v = (H*S(1:end, m+1:end)');
+        WS_u = (W*Su');
+        HS_v = (H*Sv');
         Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
         Delta_2 = sum(WS_u .* HS_v, 2);
-        US_u = sum(sum(U.*S(1:end, 1:m))); VS_v = sum(sum(V.*S(1:end, m+1:end))); 
-        SS = sum(sum(S.*S)); GS = sum(sum(G.*S));
+        US_u = sum(sum(U.*Su)); VS_v = sum(sum(V.*Sv)); 
+        SS = sum(sum([Su Sv].*[Su Sv])); GS = sum(sum(G.*[Su Sv]));
         theta = 1;
         while (true)
             if (theta < min_step_size)
@@ -92,8 +92,8 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
             if (f_diff <= nu*theta*GS)
                 loss = loss_new;
                 f = f+f_diff;
-                U = U+theta*S(1:end, 1:m);
-                V = V+theta*S(1:end, m+1:end);
+                U = U+theta*Su;
+                V = V+theta*Sv;
                 y_tilde = y_tilde_new;
                 b = b_new;
                 break;
@@ -107,7 +107,7 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
 end
 
 % See Algorithm 4 in the paper.
-function [S, cg_iters] = cg(W, H, P, Q, G, lambda)
+function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda)
     zeta = 1e-2;
     cg_max_iter = 100;
     [l, m] = size(W);
@@ -133,5 +133,6 @@ function [S, cg_iters] = cg(W, H, P, Q, G, lambda)
             break;
         end
     end
-    S = s_bar;
+    Su = s_bar(1:end, 1:m);
+    Sv = s_bar(1:end, m+1:end);
 end

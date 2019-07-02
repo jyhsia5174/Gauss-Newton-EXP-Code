@@ -76,7 +76,7 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         WS_u = (W*S(1:end, 1:m)');
         HS_v = (H*S(1:end, m+1:end)');
         Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
-        Delta_2 = sum(WS_u ./ HS_v, 2);
+        Delta_2 = sum(WS_u .* HS_v, 2);
         US_u = sum(sum(U.*S(1:end, 1:m))); VS_v = sum(sum(V.*S(1:end, m+1:end))); 
         SS = sum(sum(S.*S)); GS = sum(sum(G.*S));
         theta = 1;

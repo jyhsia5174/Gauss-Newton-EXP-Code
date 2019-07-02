@@ -1,12 +1,11 @@
-function [U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
+function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
-% function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
+% function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
 % Inputs:
 %   y: training labels, an l-dimensional binary vector. Each element should be either +1 or -1.
 %   X: training instances. X is an l-by-n matrix if you have l training instances in an n-dimensional feature space.
-%   lambda_w: the regularization coefficient of linear term.
-%   lambda_U, lambda_V: the regularization coefficients of the two interaction matrices.
+%   lambda: the regularization coefficients of the two interaction matrices.
 %   d: dimension of the latent space.
 %   epsilon: stopping tolerance in (0,1). Use a larger value if the training time is too long.
 %   do_pcond: a flag. Use 1/0 to enable/disable the diagonal preconditioner.
@@ -30,21 +29,19 @@ function [U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
     b = y_tilde-y;
     loss = 0.5*sum(b.*b);
 
-    f = 0.5*lambda_U*sum(sum(U.*U))+lambda_V*sum(sum(V.*V))+loss;
+    f = 0.5*lambda*(sum(sum(U.*U))+sum(sum(V.*V)))+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)\n');
+    fprintf('iter        time              obj          |grad|          #cg\n');
     for k = 1:max_iter
-        [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, lambda_U, do_pcond);
-        [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, lambda_V, do_pcond);
-        G_norm = norm([G_norm_U, G_norm_V]);
+        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, U*W', V*H', y_tilde, b, f, loss, lambda);
         if (k == 1)
             G_norm_0 = G_norm;
         end
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
-        fprintf('%4d  %11.3f  %14.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V);
+        fprintf('%4d  %11.3f  %14.6f  %14.6f %3d\n', k, toc, f, G_norm, cg_iters);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -52,15 +49,17 @@ function [U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
 end
 
 % See Algorithm 3 in the paper. 
-function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_block(y, W, U, Q, y_tilde, b, f, loss, lambda, do_pcond)
+function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, lambda);
     epsilon = 0.8;
+    nu = 0.1;
     max_nt_iter = 100;
-    l = size(W,1);
+    min_step_size = 1e-20;
+    [l, m] = size(W);
     G0_norm = 0;
     total_cg_iters = 0;
     nt_iters = 0;
     for k = 1:max_nt_iter
-        G = lambda*U+Q*sparse([1:l], [1:l], b)*W;
+        G = [U V] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H]
         G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
             G0_norm = G_norm;
@@ -72,26 +71,44 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         if (k == max_nt_iter)
             fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         end
-        [S, cg_iters] = pcg(W, Q, G, lambda);
+        [S, cg_iters] = cg(W, H, P, Q, G, lambda);
         total_cg_iters = total_cg_iters+cg_iters;
 
-        Delta = (sum(Q'.*(W*S'),2));
-        US = sum(sum(U.*S)); SS = sum(sum(S.*S));
-        y_tilde = y_tilde+Delta;
-        b = y_tilde - y;
-        loss_new = 0.5*sum(b .* b);
-        f_diff = 0.5*lambda*(2*US+SS)+loss_new-loss;
-        loss = loss_new;
-        f = f+f_diff;
-        U = U+S;
+        WS_u = (W*S(1:end, 1:m)');
+        HS_v = (H*S(1:end, m+1:end)');
+        Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
+        Delta_2 = sum(WS_u ./ HS_v, 2);
+        US_u = sum(sum(U.*S(1:end, 1:m))); VS_v = sum(sum(U.*S(1:end, m+1:end))); 
+        SS = sum(sum(S.*S)); GS = sum(sum(G.*S));
+        theta = 1;
+        while (true)
+            if (theta < min_step_size)
+                fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
+                return;
+            end
+            y_tilde_new = y_tilde+theta*Delta_1+theta*theta*Delta_2;
+            b_new = y_tilde_new-y;
+            loss_new = 0.5*sum(b_new.*b_new);
+            f_diff = 0.5*lambda*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
+            if (f_diff <= nu*theta*GS)
+                loss = loss_new;
+                f = f+f_diff;
+                U = U+theta*S;
+                y_tilde = y_tilde_new;
+                b = b_new;
+                break;
+            end
+            theta = theta*0.5;
+        end
     end
 end
 
 % See Algorithm 4 in the paper.
-function [S, cg_iters] = pcg(W, Q, G, lambda)
+function [S, cg_iters] = cg(W, H, P, Q, G, lambda);
     zeta = 1e-2;
     cg_max_iter = 100;
     l = size(W,1);
+    m = size(P,2);
     s_bar = zeros(size(G));
     r = -G;
     d = r;
@@ -100,8 +117,9 @@ function [S, cg_iters] = pcg(W, Q, G, lambda)
     cg_iters = 0;
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
-        z = sum(Q'.*(W*d'),2);
-        Dh = lambda*d+Q*sparse([1:l], [1:l], z)*W;
+        %z = sum(Q'.*(W*d'),2);
+        z = sum(Q'.*(W*d(1:end, 1:m)') + P'.*(H*d(1:end, m+1:end)'),2);
+        Dh = lambda*d + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;
         r = r-alpha*Dh;

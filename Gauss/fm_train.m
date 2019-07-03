@@ -25,7 +25,6 @@ function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
     V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
 
     y_tilde = (sum((U*W').*(V*H'),1))';
-
     b = y_tilde-y;
     loss = 0.5*sum(b.*b);
 
@@ -49,17 +48,17 @@ function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
 end
 
 % See Algorithm 3 in the paper. 
-function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, lambda);
+function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, lambda)
     epsilon = 0.8;
     nu = 0.1;
-    max_nt_iter = 100;
+    max_nt_iter = 1;
     min_step_size = 1e-20;
     [l, m] = size(W);
     G0_norm = 0;
     total_cg_iters = 0;
     nt_iters = 0;
     for k = 1:max_nt_iter
-        G = [U V] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H]
+        G = lambda*[U V] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H];
         G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
             G0_norm = G_norm;
@@ -71,15 +70,15 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         if (k == max_nt_iter)
             fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         end
-        [S, cg_iters] = cg(W, H, P, Q, G, lambda);
+        [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda);
         total_cg_iters = total_cg_iters+cg_iters;
 
-        WS_u = (W*S(1:end, 1:m)');
-        HS_v = (H*S(1:end, m+1:end)');
+        WS_u = (W*Su');
+        HS_v = (H*Sv');
         Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
-        Delta_2 = sum(WS_u ./ HS_v, 2);
-        US_u = sum(sum(U.*S(1:end, 1:m))); VS_v = sum(sum(U.*S(1:end, m+1:end))); 
-        SS = sum(sum(S.*S)); GS = sum(sum(G.*S));
+        Delta_2 = sum(WS_u .* HS_v, 2);
+        US_u = sum(sum(U.*Su)); VS_v = sum(sum(V.*Sv)); 
+        SS = sum(sum([Su Sv].*[Su Sv])); GS = sum(sum(G.*[Su Sv]));
         theta = 1;
         while (true)
             if (theta < min_step_size)
@@ -93,22 +92,25 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
             if (f_diff <= nu*theta*GS)
                 loss = loss_new;
                 f = f+f_diff;
-                U = U+theta*S;
+                U = U+theta*Su;
+                V = V+theta*Sv;
                 y_tilde = y_tilde_new;
                 b = b_new;
                 break;
             end
             theta = theta*0.5;
         end
+        if (theta ~= 1)
+            fprintf('Warning: Doing line search %14.10f\n', theta);
+        end
     end
 end
 
 % See Algorithm 4 in the paper.
-function [S, cg_iters] = cg(W, H, P, Q, G, lambda);
+function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda)
     zeta = 1e-2;
     cg_max_iter = 100;
-    l = size(W,1);
-    m = size(P,2);
+    [l, m] = size(W);
     s_bar = zeros(size(G));
     r = -G;
     d = r;
@@ -117,7 +119,6 @@ function [S, cg_iters] = cg(W, H, P, Q, G, lambda);
     cg_iters = 0;
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
-        %z = sum(Q'.*(W*d'),2);
         z = sum(Q'.*(W*d(1:end, 1:m)') + P'.*(H*d(1:end, m+1:end)'),2);
         Dh = lambda*d + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
         alpha = gamma/sum(sum(d.*Dh));
@@ -132,5 +133,6 @@ function [S, cg_iters] = cg(W, H, P, Q, G, lambda);
             break;
         end
     end
-    S = s_bar;
+    Su = s_bar(1:end, 1:m);
+    Sv = s_bar(1:end, m+1:end);
 end

@@ -30,7 +30,7 @@ function [U, V] = fm_train(y, W, H, lambda_U, lambda_V, d, epsilon, do_pcond)
     b = y_tilde-y;
     loss = 0.5*sum(b.*b);
 
-    f = 0.5*lambda_U*sum(sum(U.*U))+lambda_V*sum(sum(V.*V))+loss;
+    f = 0.5*(lambda_U*sum(sum(U.*U))+lambda_V*sum(sum(V.*V)))+loss;
     G_norm_0 = 0;
 
     fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)\n');

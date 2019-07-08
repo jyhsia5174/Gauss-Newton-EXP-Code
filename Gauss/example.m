@@ -1,5 +1,5 @@
 % compile the libsvmread.cpp
-make;
+%make;
 
 % set model parameters
 %lambda_U = 0.05; lambda_V = 0.05; d = 40;

@@ -2,7 +2,7 @@
 make;
 
 % set model parameters
-lambda_U = 128; lambda_V = 128; d = 4;
+lambda_U = 0.05; lambda_V = 0.05; d = 4;
 
 % set training algorithm's parameters
 epsilon = 1e-6; do_pcond = false;

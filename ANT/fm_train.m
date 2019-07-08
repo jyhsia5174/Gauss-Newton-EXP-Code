@@ -77,11 +77,11 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         total_cg_iters = total_cg_iters+cg_iters;
 
         Delta = (sum(Q'.*(W*S'),2));
-        US = sum(U.*S)*lambda_freq; SS = sum(S.*S)*lambda_freq;
+        US = sum(U.*S); SS = sum(S.*S);
         y_tilde = y_tilde+Delta;
         b = y_tilde - y;
         loss_new = 0.5*sum(b .* b);
-        f_diff = 0.5*(2*US+SS)+loss_new-loss;
+        f_diff = 0.5*(2*(US+SS)*lambda_freq)+loss_new-loss;
         loss = loss_new;
         f = f+f_diff;
         U = U+S;

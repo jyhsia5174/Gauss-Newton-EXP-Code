@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -28,12 +28,12 @@ function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
     b = y_tilde-y;
     loss = 0.5*sum(b.*b);
 
-    f = 0.5*lambda*(sum(sum(U.*U))+sum(sum(V.*V)))+loss;
+    f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 
     fprintf('iter        time              obj          |grad|          #cg\n');
     for k = 1:max_iter
-        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, U*W', V*H', y_tilde, b, f, loss, lambda);
+        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, U*W', V*H', y_tilde, b, f, loss, U_reg, V_reg);
         if (k == 1)
             G_norm_0 = G_norm;
         end
@@ -48,17 +48,17 @@ function [U, V] = fm_train(y, W, H, lambda, d, epsilon, do_pcond)
 end
 
 % See Algorithm 3 in the paper. 
-function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, lambda)
+function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, U_reg, V_reg)
     epsilon = 0.8;
     nu = 0.1;
     max_nt_iter = 1;
     min_step_size = 1e-20;
-    [l, m] = size(W);
+    l = size(W,1); m = size(U,2); n = size(V,2);
     G0_norm = 0;
     total_cg_iters = 0;
     nt_iters = 0;
     for k = 1:max_nt_iter
-        G = lambda*[U V] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H];
+        G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H];
         G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
             G0_norm = G_norm;
@@ -70,15 +70,15 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         if (k == max_nt_iter)
             fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         end
-        [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda);
+        [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg);
         total_cg_iters = total_cg_iters+cg_iters;
 
         WS_u = (W*Su');
         HS_v = (H*Sv');
         Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
         Delta_2 = sum(WS_u .* HS_v, 2);
-        US_u = sum(sum(U.*Su)); VS_v = sum(sum(V.*Sv)); 
-        SS = sum(sum([Su Sv].*[Su Sv])); GS = sum(sum(G.*[Su Sv]));
+        US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg; 
+        SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg]; GS = sum(sum(G.*[Su Sv]));
         theta = 1;
         while (true)
             if (theta < min_step_size)
@@ -88,7 +88,7 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
             y_tilde_new = y_tilde+theta*Delta_1+theta*theta*Delta_2;
             b_new = y_tilde_new-y;
             loss_new = 0.5*sum(b_new.*b_new);
-            f_diff = 0.5*lambda*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
+            f_diff = 0.5*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
             if (f_diff <= nu*theta*GS)
                 loss = loss_new;
                 f = f+f_diff;
@@ -107,7 +107,7 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
 end
 
 % See Algorithm 4 in the paper.
-function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda)
+function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg)
     zeta = 1e-2;
     cg_max_iter = 100;
     [l, m] = size(W);
@@ -117,10 +117,11 @@ function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, lambda)
     G0G0 = sum(sum(r.*r));
     gamma = G0G0;
     cg_iters = 0;
+    lambda_freq = sparse([1:size(G,2)], [1:size(G,2)], [U_reg ; V_reg]);
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
         z = sum(Q'.*(W*d(1:end, 1:m)') + P'.*(H*d(1:end, m+1:end)'),2);
-        Dh = lambda*d + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
+        Dh = d*lambda_freq + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;
         r = r-alpha*Dh;

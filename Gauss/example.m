@@ -2,7 +2,7 @@
 make;
 
 % set model parameters
-lambda_U = 0.05; lambda_V = 0.05; d = 4;
+lambda_U = 0.05; lambda_V = 0.05; d = 40;
 
 % set training algorithm's parameters
 epsilon = 1e-6; do_pcond = false;
@@ -29,7 +29,7 @@ U_reg = sum(W)'*lambda_U;
 V_reg = sum(H)'*lambda_V;
 
 % learn an FM model
-[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond);
+[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

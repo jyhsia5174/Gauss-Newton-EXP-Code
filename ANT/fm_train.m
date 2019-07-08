@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
@@ -33,7 +33,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)\n');
+    fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)        va_loss\n');
     for k = 1:max_iter
         [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, U_reg, do_pcond);
         [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, V_reg, do_pcond);
@@ -44,7 +44,9 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
-        fprintf('%4d  %11.3f  %14.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V);
+        y_test_tilde = fm_predict( W_test, H_test, U, V);
+        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        fprintf('%4d  %10.3f  %15.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)  %13.3f\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V, va_loss);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -90,7 +92,7 @@ end
 
 % See Algorithm 4 in the paper.
 function [S, cg_iters] = pcg(W, Q, G, lambda_freq)
-    zeta = 1e-2;
+    zeta = 0.3;
     cg_max_iter = 100;
     l = size(W,1);
     m = size(G,2);

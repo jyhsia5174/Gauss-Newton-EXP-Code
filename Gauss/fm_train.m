@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -31,7 +31,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|          #cg\n');
+    fprintf('iter        time              obj          |grad|     #cg     va_loss\n');
     for k = 1:max_iter
         [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, U*W', V*H', y_tilde, b, f, loss, U_reg, V_reg);
         if (k == 1)
@@ -40,7 +40,9 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond)
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
-        fprintf('%4d  %11.3f  %14.6f  %14.6f %3d\n', k, toc, f, G_norm, cg_iters);
+        y_test_tilde = fm_predict( W_test, H_test, U, V);
+        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        fprintf('%4d%12.3f%17.6f%16.6f%8d%12.3f\n', k, toc, f, G_norm, cg_iters, va_loss);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -67,9 +69,9 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
             return;
         end
         nt_iters = k;
-        if (k == max_nt_iter)
-            fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
-        end
+        %if (k == max_nt_iter)
+        %    fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
+        %end
         [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg);
         total_cg_iters = total_cg_iters+cg_iters;
 
@@ -108,7 +110,7 @@ end
 
 % See Algorithm 4 in the paper.
 function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg)
-    zeta = 1e-2;
+    zeta = 0.3; 
     cg_max_iter = 100;
     [l, m] = size(W);
     s_bar = zeros(size(G));

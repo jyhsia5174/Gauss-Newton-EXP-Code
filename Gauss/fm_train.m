@@ -14,7 +14,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
 %   w: linear coefficients. An n-dimensional vector.
 %   U, V: the interaction (d-by-n) matrices.
     tic;
-    max_iter = 1000;
+    max_iter = 100;
 
     [l, m] = size(W);
     [l, n] = size(H);

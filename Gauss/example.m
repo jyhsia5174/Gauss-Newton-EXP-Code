@@ -2,14 +2,15 @@
 make;
 
 % set model parameters
-lambda_U = 0.05; lambda_V = 0.05; d = 40;
+%lambda_U = 0.05; lambda_V = 0.05; d = 40;
+%tr = 'ml.tr'; va = 'ml.te';
 
 % set training algorithm's parameters
 epsilon = 1e-6; do_pcond = false;
 
 % prepare training and test data sets
-[y, W, H] = libsvmread('ml.tr.10w');
-[y_test,W_test, H_test] = libsvmread('ml.tr.10w');
+[y, W, H] = libsvmread(tr);
+[y_test,W_test, H_test] = libsvmread(va);
 
 
 n = max(size(W,2),size(W_test,2));

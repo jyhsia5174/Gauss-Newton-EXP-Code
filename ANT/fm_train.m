@@ -78,7 +78,7 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         [S, cg_iters] = pcg(W, Q, G, lambda_freq);
         total_cg_iters = total_cg_iters+cg_iters;
 
-        Delta = (sum(Q'.*(W*S'),2));
+        Delta = (sum(Q.*(S*W'),1))';
         US = sum(U.*S); SS = sum(S.*S);
         y_tilde = y_tilde+Delta;
         b = y_tilde - y;
@@ -104,7 +104,7 @@ function [S, cg_iters] = pcg(W, Q, G, lambda_freq)
     cg_iters = 0;
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
-        z = sum(Q'.*(W*d'),2);
+        z = sum(Q.*(d*W'),1);
         Dh = d*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;

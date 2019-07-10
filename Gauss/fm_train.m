@@ -32,8 +32,12 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
     G_norm_0 = 0;
 
     fprintf('iter        time              obj          |grad|     #cg     va_loss\n');
+    global P;
+    global Q;
     for k = 1:max_iter
-        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, U*W', V*H', y_tilde, b, f, loss, U_reg, V_reg);
+        P = U*W';
+        Q = V*H';
+        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
         if (k == 1)
             G_norm_0 = G_norm;
         end
@@ -50,7 +54,9 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
 end
 
 % See Algorithm 3 in the paper. 
-function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, P, Q, y_tilde, b, f, loss, U_reg, V_reg)
+function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
+    global P;
+    global Q;
     epsilon = 0.8;
     nu = 0.1;
     max_nt_iter = 1;
@@ -73,7 +79,7 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         %if (k == max_nt_iter)
         %    fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         %end
-        [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg);
+        [Su, Sv, cg_iters] = cg(W, H, G, U_reg, V_reg);
         total_cg_iters = total_cg_iters+cg_iters;
 
         WS_u = (Su*W');
@@ -110,7 +116,9 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
 end
 
 % See Algorithm 4 in the paper.
-function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg)
+function [Su, Sv, cg_iters] = cg(W, H, G, U_reg, V_reg)
+    global P;
+    global Q;
     zeta = 0.3; 
     cg_max_iter = 100;
     [l, m] = size(W);
@@ -124,7 +132,7 @@ function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg)
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
         z = dot(Q, (d(1:end, 1:m)*W'));
-        z = dot(P, (d(1:end, m+1:end)*H'));
+        z = z + dot(P, (d(1:end, m+1:end)*H'));
         Dh = d*lambda_freq + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;

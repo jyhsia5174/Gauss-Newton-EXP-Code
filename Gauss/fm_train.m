@@ -24,7 +24,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
     U = 2*(0.1/sqrt(d))*(rand(d,m)-0.5);
     V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
 
-    y_tilde = (sum((U*W').*(V*H'),1))';
+    y_tilde = (sum((W*U').*(H*V'),2));
     b = y_tilde-y;
     loss = 0.5*sum(b.*b);
 
@@ -60,7 +60,8 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
     total_cg_iters = 0;
     nt_iters = 0;
     for k = 1:max_nt_iter
-        G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)] + [Q*sparse([1:l], [1:l], b)*W  P*sparse([1:l], [1:l], b)*H];
+        G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
+        G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
         G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
             G0_norm = G_norm;
@@ -75,10 +76,10 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg);
         total_cg_iters = total_cg_iters+cg_iters;
 
-        WS_u = (W*Su');
-        HS_v = (H*Sv');
-        Delta_1 = sum(Q'.*WS_u + P'.*HS_v, 2);
-        Delta_2 = sum(WS_u .* HS_v, 2);
+        WS_u = (Su*W');
+        HS_v = (Sv*H');
+        Delta_1 = sum(Q.*WS_u + P.*HS_v, 1)';
+        Delta_2 = sum(WS_u .* HS_v, 1)';
         US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg; 
         SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg]; GS = sum(sum(G.*[Su Sv]));
         theta = 1;
@@ -122,7 +123,8 @@ function [Su, Sv, cg_iters] = cg(W, H, P, Q, G, U_reg, V_reg)
     lambda_freq = sparse([1:size(G,2)], [1:size(G,2)], [U_reg ; V_reg]);
     while (gamma > zeta*zeta*G0G0)
         cg_iters = cg_iters+1;
-        z = sum(Q'.*(W*d(1:end, 1:m)') + P'.*(H*d(1:end, m+1:end)'),2);
+        z = dot(Q, (d(1:end, 1:m)*W'));
+        z = dot(P, (d(1:end, m+1:end)*H'));
         Dh = d*lambda_freq + [Q*sparse([1:l], [1:l], z)*W P*sparse([1:l], [1:l], z)*H];
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;

@@ -47,6 +47,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
         fprintf('%4d  %10.3f  %15.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)  %13.3f\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V, va_loss);
+        
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -83,7 +84,7 @@ function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_blo
         y_tilde = y_tilde+Delta;
         b = y_tilde - y;
         loss_new = 0.5*sum(b .* b);
-        f_diff = 0.5*(2*(US+SS)*lambda_freq)+loss_new-loss;
+        f_diff = 0.5*((2*US+SS)*lambda_freq)+loss_new-loss;
         loss = loss_new;
         f = f+f_diff;
         U = U+S;

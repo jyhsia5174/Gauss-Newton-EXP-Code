@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
@@ -15,7 +15,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
 %   w: linear coefficients. An n-dimensional vector.
 %   U, V: the interaction (d-by-n) matrices.
     tic;
-    max_iter = 100;
+%    max_iter = 100;
 
     [l, m] = size(W);
     [l, n] = size(H);

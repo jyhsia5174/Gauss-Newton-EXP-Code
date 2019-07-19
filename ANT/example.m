@@ -30,7 +30,7 @@ U_reg = sum(W)'*lambda_U;
 V_reg = sum(H)'*lambda_V;
 
 % learn an FM model
-[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test);
+[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

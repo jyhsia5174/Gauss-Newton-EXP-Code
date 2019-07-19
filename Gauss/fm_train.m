@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, W_test, H_test)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -14,7 +14,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
 %   w: linear coefficients. An n-dimensional vector.
 %   U, V: the interaction (d-by-n) matrices.
     tic;
-    max_iter = 100;
+%    max_iter = 100;
 
     [l, m] = size(W);
     [l, n] = size(H);
@@ -31,13 +31,13 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|     #cg     va_loss\n');
+    fprintf('iter        time              obj          |grad|     #cg     va_loss         |Ugrad|         |Vgrad|\n');
     global P;
     global Q;
     for k = 1:max_iter
         P = U*W';
         Q = V*H';
-        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
+        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, GU_norm, GV_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
         if (k == 1)
             G_norm_0 = G_norm;
         end
@@ -46,7 +46,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
         end
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
-        fprintf('%4d  %10.3f  %15.6f  %14.6f  %6d  %10.3f\n', k, toc, f, G_norm, cg_iters, va_loss);
+        fprintf('%4d  %10.3f  %15.6f  %14.6f  %6d  %10.3f  %14.6f  %14.6f\n', k, toc, f, G_norm, cg_iters, va_loss, GU_norm, GV_norm);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -54,7 +54,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, do_pcond, y_test, 
 end
 
 % See Algorithm 3 in the paper. 
-function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
+function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, GU_norm, GV_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
     global P;
     global Q;
     epsilon = 0.8;
@@ -69,6 +69,8 @@ function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update(
         G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
         G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
         G_norm = sqrt(sum(sum(G.*G)));
+        GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
+        GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
         if (k == 1)
             G0_norm = G_norm;
         end

@@ -31,7 +31,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 
-    fprintf('iter        time              obj          |grad|     #cg     va_loss         |Ugrad|         |Vgrad|\n');
+    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|grad|', 'va_loss', '|GV|', '|GV|', 'loss');
     global P;
     global Q;
     for k = 1:max_iter
@@ -46,7 +46,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
         end
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
-        fprintf('%4d  %10.3f  %15.6f  %14.6f  %6d  %10.3f  %14.6f  %14.6f\n', k, toc, f, G_norm, cg_iters, va_loss, GU_norm, GV_norm);
+        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters, f, G_norm, va_loss, GU_norm, GV_norm, loss);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
@@ -122,7 +122,7 @@ function [Su, Sv, cg_iters] = cg(W, H, G, U_reg, V_reg)
     global P;
     global Q;
     zeta = 0.3; 
-    cg_max_iter = 100;
+    cg_max_iter = 20;
     [l, m] = size(W);
     s_bar = zeros(size(G));
     r = -G;

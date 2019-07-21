@@ -38,16 +38,19 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
         [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, U_reg, do_pcond);
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
+        GV = V*sparse([1:n], [1:n], V_reg)+(U*W')*sparse([1:l], [1:l], b)*H;
+        G_norm = norm([GU GV]);
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_U, f, G_norm_U, va_loss, G_norm, loss);
 
         [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, V_reg, do_pcond);
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
-        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, va_loss, G_norm, loss);
-        
         GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
         GV = V*sparse([1:n], [1:n], V_reg)+(U*W')*sparse([1:l], [1:l], b)*H;
         G_norm = norm([GU GV]);
+        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, va_loss, G_norm, loss);
+        
         if (k == 1)
             G_norm_0 = G_norm;
         end

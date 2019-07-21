@@ -46,6 +46,13 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
         end
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        P = U*W';
+        Q = V*H';
+        G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
+        G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
+        G_norm = sqrt(sum(sum(G.*G)));
+        GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
+        GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters, f, G_norm, va_loss, GU_norm, GV_norm, loss);
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');

@@ -31,22 +31,29 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     loss = 0.5*sum(b.*b);
 
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
-    G_norm_0 = 0;
+    G_norm_0 = 0; G_norm = 0;
 
-    fprintf('iter        time              obj          |grad|           |gradU| (#nt,#cg)           |gradV| (#nt,#cg)        va_loss\n');
+    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|grad|', 'va_loss', '|UV_Grad|', 'loss');
     for k = 1:max_iter
         [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, U_reg, do_pcond);
+        y_test_tilde = fm_predict( W_test, H_test, U, V);
+        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_U, f, G_norm_U, va_loss, G_norm, loss);
+
         [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, V_reg, do_pcond);
-        G_norm = norm([G_norm_U, G_norm_V]);
+        y_test_tilde = fm_predict( W_test, H_test, U, V);
+        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, va_loss, G_norm, loss);
+        
+        GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
+        GV = V*sparse([1:n], [1:n], V_reg)+(U*W')*sparse([1:l], [1:l], b)*H;
+        G_norm = norm([GU GV]);
         if (k == 1)
             G_norm_0 = G_norm;
         end
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
-        y_test_tilde = fm_predict( W_test, H_test, U, V);
-        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
-        fprintf('%4d  %10.3f  %15.6f  %14.6f    %14.6f (%3d,%3d)    %14.6f (%3d,%3d)  %13.3f\n', k, toc, f, G_norm, G_norm_U, nt_iters_U, cg_iters_U, G_norm_V, nt_iters_V, cg_iters_V, va_loss);
         
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
@@ -94,7 +101,7 @@ end
 % See Algorithm 4 in the paper.
 function [S, cg_iters] = pcg(W, Q, G, lambda_freq)
     zeta = 0.3;
-    cg_max_iter = 100;
+    cg_max_iter = 20;
     l = size(W,1);
     m = size(G,2);
     s_bar = zeros(size(G));

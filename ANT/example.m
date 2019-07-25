@@ -6,7 +6,8 @@
 %tr = 'ml.tr'; va = 'ml.te';
 
 % set training algorithm's parameters
-epsilon = 1e-6; do_pcond = false;
+%epsilon = 1e-6; 
+do_pcond = false;
 
 % prepare training and test data sets
 [y, W, H] = libsvmread(tr);

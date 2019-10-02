@@ -49,7 +49,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
 			break;
 		end
 
-        [U, V, y_tilde, b, f, loss, nt_iters, G_norm, GU_norm, GV_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
+        [U, V, y_tilde, b, f, loss, G_norm, GU_norm, GV_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
 
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
@@ -69,67 +69,61 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
 end
 
 % See Algorithm 3 in the paper.
-function [U, V, y_tilde, b, f, loss, nt_iters, G_norm, GU_norm, GV_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
+function [U, V, y_tilde, b, f, loss, G_norm, GU_norm, GV_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
     global P;
     global Q;
     epsilon = 0.8;
     nu = 0.1;
-    max_nt_iter = 1;
+%    max_nt_iter = 1;
     min_step_size = 1e-20;
     l = size(W,1); m = size(U,2); n = size(V,2);
-    G0_norm = 0;
+%    G0_norm = 0;
     total_cg_iters = 0;
-    nt_iters = 0;
-    for k = 1:max_nt_iter
-        G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
-        G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
-        G_norm = sqrt(sum(sum(G.*G)));
-        GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
-        GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
-        if (k == 1)
-            G0_norm = G_norm;
-        end
-        if (G_norm <= epsilon*G0_norm)
-            return;
-        end
-        nt_iters = k;
+%    nt_iters = 0;
+
+    G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
+    G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
+    G_norm = sqrt(sum(sum(G.*G)));
+    GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
+    GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
+
         %if (k == max_nt_iter)
         %    fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
         %end
-        [Su, Sv, cg_iters] = cg(W, H, G, U_reg, V_reg);
-        total_cg_iters = total_cg_iters+cg_iters;
+    [Su, Sv, cg_iters] = cg(W, H, G, U_reg, V_reg);
+    total_cg_iters = total_cg_iters+cg_iters;
 
-        WS_u = (Su*W');
-        HS_v = (Sv*H');
-        Delta_1 = sum(Q.*WS_u + P.*HS_v, 1)';
-        Delta_2 = sum(WS_u .* HS_v, 1)';
-        US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg;
-        SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg]; GS = sum(sum(G.*[Su Sv]));
-        theta = 1;
-        while (true)
-            if (theta < min_step_size)
-                fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
-                return;
-            end
-            y_tilde_new = y_tilde+theta*Delta_1+theta*theta*Delta_2;
-            b_new = y_tilde_new-y;
-            loss_new = 0.5*sum(b_new.*b_new);
-            f_diff = 0.5*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
-            if (f_diff <= nu*theta*GS)
-                loss = loss_new;
-                f = f+f_diff;
-                U = U+theta*Su;
-                V = V+theta*Sv;
-                y_tilde = y_tilde_new;
-                b = b_new;
-                break;
-            end
-            theta = theta*0.5;
+    WS_u = (Su*W');
+    HS_v = (Sv*H');
+    Delta_1 = sum(Q.*WS_u + P.*HS_v, 1)';
+    Delta_2 = sum(WS_u .* HS_v, 1)';
+    US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg;
+    SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg]; GS = sum(sum(G.*[Su Sv]));
+    theta = 1;
+    while (true)
+        if (theta < min_step_size)
+            fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
+            return;
         end
-        if (theta ~= 1)
-            fprintf('Warning: Doing line search %14.10f\n', theta);
+        y_tilde_new = y_tilde+theta*Delta_1+theta*theta*Delta_2;
+        b_new = y_tilde_new-y;
+        loss_new = 0.5*sum(b_new.*b_new);
+        f_diff = 0.5*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
+        if (f_diff <= nu*theta*GS)
+            loss = loss_new;
+            f = f+f_diff;
+            U = U+theta*Su;
+            V = V+theta*Sv;
+            y_tilde = y_tilde_new;
+            b = b_new;
+            break;
         end
+        theta = theta*0.5;
     end
+    if (theta ~= 1)
+        fprintf('Warning: Doing line search %14.10f\n', theta);
+    end
+
 end
 
 % See Algorithm 4 in the paper.

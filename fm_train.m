@@ -49,7 +49,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
 			break;
 		end
 
-        [U, V, y_tilde, b, f, loss, G_norm, GU_norm, GV_norm, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
+        [U, V, y_tilde, b, f, loss, cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg);
 
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
@@ -69,7 +69,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
 end
 
 % See Algorithm 3 in the paper.
-function [U, V, y_tilde, b, f, loss, G_norm, GU_norm, GV_norm, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
+function [U, V, y_tilde, b, f, loss, total_cg_iters] = update(y, W, H, U, V, y_tilde, b, f, loss, U_reg, V_reg)
     global P;
     global Q;
     epsilon = 0.8;
@@ -83,9 +83,9 @@ function [U, V, y_tilde, b, f, loss, G_norm, GU_norm, GV_norm, total_cg_iters] =
 
     G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
     G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
-    G_norm = sqrt(sum(sum(G.*G)));
-    GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
-    GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
+%    G_norm = sqrt(sum(sum(G.*G)));
+%    GU_norm = sqrt(sum(sum(G(1:end, 1:m).*G(1:end, 1:m))));
+%    GV_norm = sqrt(sum(sum(G(1:end, m+1:end).*G(1:end, m+1:end))));
 
         %if (k == max_nt_iter)
         %    fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');

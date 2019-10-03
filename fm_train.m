@@ -37,10 +37,13 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     for k = 1:max_iter
         P = U*W';
         Q = V*H';
+		G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
+        G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
+        G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
-            G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
-            G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
-            G_norm = sqrt(sum(sum(G.*G)));
+%            G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)];
+%            G = G + [Q*(sparse([1:l], [1:l], b)*W)  P*(sparse([1:l], [1:l], b)*H)];
+%            G_norm = sqrt(sum(sum(G.*G)));
             G_norm_0 = G_norm;
             fprintf('Warning: %15.6f\n', G_norm_0);
         end

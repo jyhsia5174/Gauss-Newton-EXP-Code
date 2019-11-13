@@ -1,0 +1,95 @@
+\mychapter{A Review of Alternating Newton Methods}\label{sec:ANT}
+\input{appendix}
+In \citet{WSC18a}, they solve the optimization problem \eqref{eq:reMF} by a block coordinate descent method. For the two blocks $U$ and $V$, each time one block is fixed while the other is updated. A simple illustration of the procedure is in Algorithm \ref{alg:AntFramework}.
+\par For each sub-problem to update one block, \citet{WSC18a} apply a truncated Newton method. Note that because \eqref{eq:min_reMF} is multi-block convex function, each sub-problem is convex. We consider the sub-problem of $U$ as an example to show details of the Newton method. Instead of copying results from \citet{WSC18a}, here we show that materials can be extracted from the more sophisticated algorithm in Section~\ref{sec:NewtonFM} for minimizing both blocks together. To begin, from \eqref{eq:gradUV}-\eqref{eq:Grad}, we have 
+\begin{align}
+{\nabla}_U {f}(U, V) 
+=\lambda U +   Q \bigl(\diag(\bsym{b}) W \bigr)  
+\label{eq:AntGrad}.
+\end{align}
+For the Hessian matrix, from \eqref{eq:H}, 
+\begin{align}
+\frac{\partial }{\partial \vectorize(U)^T} \frac{\partial f}{\partial \vectorize(U)}
+&=\lambda I + \sum_{i=1}^{l} (\bw_i\otimes\bq_i) (\bw_i\otimes\bq_i)^T + \sum_{i=1}^{l} b_i \frac{\partial (\bw_i\otimes\bq_i)}{\partial \vectorize(U)^T}\label{eq:AntH}\\
+&=\lambda I + \sum_{i=1}^{l} (\bw_i\otimes\bq_i) (\bw_i\otimes\bq_i)^T\label{eq:AntH_2}.
+\end{align}
+Note that the last term in \eqref{eq:AntH} is zero because $\bw_i\otimes\bq_i$ is not a function of $U$. Therefore, the Hessian matrix is positive definite. Further, it is a constant matrix independent of $U$. The reason is that when $V$ is fixed, the square loss function considered in \eqref{eq:min_reMF} leads to a convex quadratic function of $U$.
+
+The sub-problem of $U$ becomes equivalent to solving the following linear system by the conjugate gradient method.
+\begin{align}
+\biggl(\frac{\partial }{\partial \vectorize(U)^T} \frac{\partial f}{\partial \vectorize(U)} \biggr)\bs
+&= - \frac{\partial f}{\partial \vectorize(U)}
+\label{eq:AntHsG}.
+\end{align}
+To get the product between the Hessian matrix and a vector 
+\begin{equation}
+\bs = \vectorize(S_u), 
+\label{eq:Ants}
+\end{equation}
+from (\ref{eq:AntH_2}), (\ref{eq:kronecker_vec}), and (\ref{eq:DefZi}), we first calculate
+\begin{equation}
+\begin{aligned}
+    z_i 
+    &=\begin{bmatrix} \bw_i^T\otimes\bq_i^T \end{bmatrix}\vectorize(S_u)\\
+    &=\bq_i^T S_u \bw_i , \text{ }i=1,\dots,l
+    \label{eq:AntDefZi},
+\end{aligned}
+\end{equation}
+or equivalently
+\begin{equation}
+    \textbf{\textit{z}} = \biggl({Q^T}\odot{(WS_u^T)}\biggr) \bsym{1}_{d\times 1}
+    \label{eq:AntCalcZ}.
+\end{equation}
+Let $H$ be the Hessian in (\ref{eq:AntH_2}). From (\ref{eq:AntDefZi}), (\ref{eq:AntH_2}), (\ref{eq:Ants}) and  (\ref{eq:kronecker_vec}),
+\begin{align}
+    H \bs         
+                  &= \lambda \vectorize(S_u) + \sum_{i=1}^l z_i (\bw_i\otimes \bq_i) \nonumber \\
+                  &= \lambda \vectorize(S_u) +  \sum_{i=1}^l \vectorize\left(z_i \bq_i \bw_i^T\right)  \nonumber  \\
+                  &= \lambda \vectorize(S_u) +  \vectorize \Bigl ( Q \bigl(\diag(\textbf{\textit{z}}) W \bigr) \Bigr) \label{eq:AntHv}.
+\end{align}
+%For line search, now only $U$ is changed. Assume that
+%\begin{equation}
+%    \tilde{\Delta}_i=(S_u\bw_i)^T(V\bh_i),\; i=1,\dots,l    
+%    \label{eq:AntLsRequire}
+%\end{equation}
+%are available.
+%At an arbitrary $\theta$, we can calculate
+%\begin{equation}
+%    \left((U+\theta S_u)\bw_i\right)^T\left(V\bh_i\right) = \tilde{y}_i + \theta\tilde{\Delta}_i     
+%    \label{eq:AntExpTheta}
+%\end{equation}
+%to get the new output value.
+%Now we have 
+%\begin{equation*}
+%    \begin{aligned}
+%        f(U+\theta S_{u},V) - f(U,V)        
+%        =& \frac{\lambda}{2}\left( 2\theta \langle{U}{,}{S_u}\rangle + \theta^2\|S_u\|_F^2 \right)\\ 
+%        &+ \frac{1}{2} \sum_{i=1}^l (y_i-\tilde{y}_i-\theta\tilde{\Delta}_i)^2 - \frac{1}{2} \sum_{i=1}^l (y_i-\tilde{y}_i)^2        
+%    \end{aligned}
+%\end{equation*}
+%We further maintain
+%\begin{equation}    
+%    \langle{U}{,}{S_u}\rangle,\|S_u\|_F^2,\text{ and } \tilde{\bg}^T\tilde{\bs}.
+%    \label{eq:AntLsRequire1}
+%\end{equation}
+The computational complexity is
+\begin{equation*}
+(\text{\# of CG iterations}+2)\times \bbO{ d \times \text{nnz}(W)}.
+\end{equation*}
+The CG procedure stops if the CG iterate $\bs$ satisfies
+\begin{equation}
+    \|\ H\bs + \frac{\partial f}{\partial \vectorize(U)} \| \le \eta \| \frac{\nabla f}{\partial \vectorize(U)} \|.
+    \label{eq:AntStopMsub}
+\end{equation}
+Note that because the sub-problem is equivalent to a linear system \eqref{eq:AntHsG}, one single CG procedure is enough to obtain an approximate solution. Thus there is no need to have an outer Newton procedure. The CG procedure is presented in Algorithm \ref{alg:LrFrameworkU}.
+Clearly, these procedures are simplified from algorithms considering $U$ and $V$ together. Note that in Algorithm \ref{alg:LrFrameworkU}, we do not need to form $P \gets UW^T$ as in Algorithm \ref{alg:LrFramework} because $UW^T$ is used only once.
+
+To solve the sub-problem over $V$, we apply the same procedure through the following values which are swapped.
+$$ U \leftrightarrow V $$
+$$ S_u \leftrightarrow S_v $$
+$$ \bw_i \leftrightarrow \bh_i $$
+$$ \bq_i \leftrightarrow \bp_i $$
+$$ W \leftrightarrow H $$
+$$ Q \leftrightarrow P $$
+
+Regarding the memory cost, the bottleneck is at similar places to those in Algorithm \ref{alg:LrFramework}. However, the needed memory is only about half of Algorithm \ref{alg:LrFramework}. This can be clearly seen from comparing Line \ref{alg:CG:compz} of Algorithm \ref{alg:CG} and Line \ref{alg:Pcg:compz} of Algorithm \ref{alg:LrFrameworkU}.

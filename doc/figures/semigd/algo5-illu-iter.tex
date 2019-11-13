@@ -1,0 +1,22 @@
+\documentclass[border=0pt]{standalone}
+\usepackage{tikz,amssymb,url,amsmath,amsthm,listings,algorithm,algpseudocode,enumerate, caption, xspace, float, verbatim,tabularx,mathtools,adjustbox,pgfplots}
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+\usetikzlibrary{math}
+\usetikzlibrary{shapes.misc}
+\usetikzlibrary{backgrounds}
+\def\bw{{\boldsymbol w}}
+\def\bx{{\boldsymbol x}}
+\def\balpha{{\boldsymbol \alpha}}
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+\tikzset{cross/.style={cross out, draw=black, minimum size=2*(#1-\pgflinewidth), inner sep=0pt, outer sep=0pt},cross/.default={1pt}}
+\begin{document}
+\begin{tikzpicture}[yscale=1,xscale=1,baseline,tight background]
+	\input{algo5-illu-tikzmath}
+	\node at (\iax,\iay)[right]{iter 1};
+	\node at (\ibx,\iby)[right]{iter 2};
+	\node at (\icx+0.4,\icy+0.1)[right]{$\vdots$};
+	\node at (\idx,\idy)[right]{iter $r$};
+\end{tikzpicture}
+\end{document}

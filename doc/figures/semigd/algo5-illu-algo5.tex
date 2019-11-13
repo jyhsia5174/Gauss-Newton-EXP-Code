@@ -1,0 +1,29 @@
+\documentclass[border=0pt]{standalone}
+\usepackage{tikz,amssymb,url,amsmath,amsthm,listings,algorithm,algpseudocode,enumerate, caption, xspace, float, verbatim,tabularx,mathtools,adjustbox,pgfplots}
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+\usetikzlibrary{math}
+\usetikzlibrary{shapes.misc}
+\usetikzlibrary{backgrounds}
+\def\bw{{\boldsymbol w}}
+\def\bx{{\boldsymbol x}}
+\def\balpha{{\boldsymbol \alpha}}
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+\tikzset{cross/.style={cross out, draw=black, minimum size=2*(#1-\pgflinewidth), inner sep=0pt, outer sep=0pt},cross/.default={1pt}}
+\begin{document}
+\begin{tikzpicture}[yscale=1,xscale=1,baseline,tight background]
+	\input{algo5-illu-tikzmath}
+	\node at (\smax,\smay)[left]{$\nabla f(\balpha^1)$};
+	\node at (\smbx,\smby)[left]{};
+	\node at (\smcx+0.4,\smcy)[left]{};
+	\node at (\smdx,\smdy)[left]{};
+	\node at (\smijax,\smijay)[right]{$(i_1,j_1)$};
+	\node at (\smijbx,\smijby)[right]{$(i_2,j_2)$};
+	\node at (\smijcx+0.4,\smijcy+0.1)[right]{$\vdots$};
+	\node at (\smijdx,\smijdy)[right]{$(i_r,j_r)$};
+	\draw[->] (\smax,\smay) -- (\smijax, \smijay);
+	\draw[->] (\smax,\smay-0.1) -- (\smijbx, \smijby+0.2);
+	\draw[->] (\smax,\smay-0.4) -- (\smijdx, \smijdy+0.3);
+\end{tikzpicture}
+\end{document}

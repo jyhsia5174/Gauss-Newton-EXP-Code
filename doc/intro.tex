@@ -1,0 +1,36 @@
+\mychapter{Introduction}\label{sec:intro}
+\par Given a rating matrix $R$,  matrix factorization (MF) is a technique to find two dense matrices $U \in \bbr^{d \times M}$ and $V \in \bbr^{d \times N}$ such that $r_{m,n} \simeq \bu_m^T\bv_n$, where $\bu_m \in \bbr^d$ and $\bv_n \in \bbr^d$ are respectively the $m$th column of $U$ and the $n$th column of $V$, $d$ is the pre-specified number of latent features, and the entry $r_{m,n}$ denotes the feedback of the $m$th user on the $n$th item.  This task is achieved by solving the following non-convex problem
+%To determines MF's parameters, we solve the following optimization problem.
+\begin{equation}
+    %\min_{U, V} \quad f(U, V)
+    \min_{U,V} \quad \frac{1}{2}\sum_{(m, n) \in R}  (r_{m,n} - \bu_m^T \bv_n)^2+
+    \frac{\lambda}{2} (\|U\|^2_F + \|V\|^2_F	)
+    \label{eq:MF}
+\end{equation}
+where $(m, n) \in R$ indicates that rating $r_{m,n}$ is available, $\lambda$ is regularization coefficients for avoiding over-fitting, and $\|\cdot\|_F$ is the Frobenius norm.
+%$R$ is is the rating matrix that includes the feedback of the $m$th user on $n$th item at the ($m$, $n$) entry $r_{m n}$. %The matrix factorization is technique to find two dense matrices $U \in \bbr^{d \times M}$ and $V \in \bbr^{d \times N}$ such that $r_{m,n} = \bu_m^T\bv_n$, where $\bu_m \in \bbr^d$ and $\bv_n \in \bbr^d$ are respectively the $m$th column of $U$ and the $n$th column of $V$.  
+In fact, problem \eqref{eq:MF} is a special case of Factorization Machines (FM) \citep{SR10c}. The optimization problem solved by FM is as follows.
+\begin{equation}
+\min_{U, V} \quad f(U, V)\label{eq:reMF}
+\end{equation}
+where 
+\begin{equation}
+    f(U, V) = \frac{1}{2}\sum_{i=1}^l  \Bigl(y_i - (U \bw_i)^T (V \bh_i)\Bigr)^2+
+    \frac{\lambda}{2} (\|U\|^2_F +\|V\|^2_F	)
+    \label{eq:min_reMF}
+\end{equation}
+and $l$ is the total number of training instances. Problem \eqref{eq:min_reMF} can be considered as a regression problem, where $y_i$ is the label, and $\bh_i \in \bbr^N $ and $\bw_i \in \bbr^M$ are the feature vectors. If we let $l$ be the number of non-zero entries in $R$, the value $y_i=r_{m, n}$ be the corresponding rating from $R$,
+\begin{equation}
+    \bw_i=[\underbrace{0,\dots,0}_{\text{$m-1$}},1,0,\dots,0]^T
+    \label{eq:wi},\text{ and}
+\end{equation}
+\begin{equation}
+    \bh_i=[\underbrace{0,\dots,0}_{\text{$n-1$}},1,0,\dots,0]^T
+    \label{eq:hi},
+\end{equation}
+then problem \eqref{eq:reMF} is reduced to \eqref{eq:MF}. Note that \eqref{eq:reMF} is a variant of FM proposed in \citet{MB16a}. 
+One of its advantages is that the function in \eqref{eq:min_reMF} is multi-block convex. That is, if $U$ (or $V$) is fixed, then $f(U,V)$ is a convex function of $V$ (or $U$). In this work, we focus on solving the optimization  problem \eqref{eq:reMF}.
+
+Many optimization methods have been proposed to minimize \eqref{eq:reMF}. We are particularly interested in Newton methods. \citet{WSC18a} have proposed an alternating Newton method and showed that it achieves state-of-the-art efficiency. The basic idea is to alternately switch between solving two sub-problems, each of which minimizes over one block of variables but fixes the other. Namely the first sub-problem minimizes over $U$ while keeping $V$ fixed, and the other minimizes over $V$ while keeping $U$ fixed.
+
+Instead of alternately solving two sub-problems, naturally we ask why not minimizing $f(U,V)$ directly by the Newton method. To the best of our knowledge, no study has considered such a setting for factorization machines. In this work, we begin with developing a Newton method to solve problem \eqref{eq:reMF}. We then conduct detailed comparisons with the alternating Newton method.

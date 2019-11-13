@@ -1,0 +1,56 @@
+We consider a preconditioner $\tilde{M}$ to approximately factorize $H$ such that $H \approx \tilde{M}\tilde{M}^T$, and then use CG to solve
+\begin{equation}
+    \hat{H} \hat{\bs}  = \hat{\bg},
+    \label{eq:PcondSys}
+\end{equation}
+where $\hat{H}=\tilde{M}^{-1}{H}\tilde{M}^{-T}$ and $\hat{\bg}=\tilde{M}^{-1}{\bg}$.
+Once $\hat{\bs}$ is found, the solution of (\ref{eq:HLE}) can be recovered by ${\bs}=\tilde{M}^{-T}\hat{\bs}$. 
+Then, we consider the following diagonal preconditioner for solving \eqref{eq:HLE} as an example.
+\begin{equation}
+    \tilde{M}=\tilde{M}^T=\diag({\bsym{h}}),
+    \label{eq:Conder}
+\end{equation}
+where
+\begin{equation*}
+    {\bsym{h}} = \sqrt{ {\lambda} \bsym{1}_{d(M+N) \times 1} + \sum_{i=1}^l {\bj_i} \odot {\bj_i} }.
+\end{equation*}
+Note that ``$\sqrt{\cdot}$'' element-wisely performs the square-root operation if the input argument is a vector or a matrix. From 
+\begin {align}
+\bj_i &= \begin{bmatrix} \bw_i\otimes \bq_i \\ \bh_i\otimes \bp_i \end{bmatrix} = \begin{bmatrix} \vectorize(\bq_i \bw_i^T) \\ \vectorize(\bp_i \bh_i^T) \end{bmatrix}
+\label{eq:Jacob_},
+\end{align}
+we have
+\begin{align}
+\sum_{i=1}^l {\bj_i} \odot {\bj_i}
+&= \sum_{i=1}^l \begin{bmatrix} \vectorize \bigl((\bq_i \odot \bq_i) (\bw_i \odot \bw_i)^T \bigr) \\ \vectorize \bigl((\bp_i \odot \bp_i) (\bh_i \odot \bh_i)^T \bigr) \end{bmatrix} \nonumber  \\
+&= \begin{bmatrix} \vectorize \bigl((Q \odot Q) (W \odot W) \bigr) \\ \vectorize \bigl((P \odot P) (H \odot H) \bigr) \end{bmatrix}
+\label{eq:jj}.
+\end{align}
+Thus, the preconditioner can be obtained via
+\begin{equation}
+    \tilde{M}=\tilde{M}^T=\diag \Bigl( \sqrt{ {\lambda} \bsym{1}_{d(M+N) \times 1} + \begin{bmatrix} \vectorize \bigl((Q \odot Q) (W \odot W) \bigr) \\ \vectorize \bigl((P \odot P) (H \odot H) \bigr) \end{bmatrix} } \Bigr).
+    \label{eq:Conder}
+\end{equation}
+\begin{algorithm}[t]
+    \caption{A preconditioned conjugate gradient method for solving \eqref{eq:HLE} by operations on matrix variables.}
+    \label{alg:PCG}
+    \begin{algorithmic}[1]
+        \State Given $0<\eta<1$ and $G$, the gradient matrix form of \eqref{eq:reMF}. Let $\hat{S}=\bsym{0}_{d\times (M+N)}$.
+        \State Compute $M$ via \eqref{eq:Conder}.
+        %\State Calculate $\hat{G} = G \prescript{}{\cdot}{/} M$, $R=-\hat{G}$, $\gamma=\no{R}_F^2$, and $\hat{D}=R$.
+        \State Calculate $R = -G\prescript{}{\cdot}{/} M$, $\hat{D}=R$, and $\gamma^0=\gamma=\|R\|_F^2$.
+        \While {$\sqrt{\gamma} > \eta \sqrt{\gamma^0}$}
+            \State $\hat{D}_h \gets \hat{D}\prescript{}{\cdot}{/} M $
+            \State $\hat{\bz}\gets \left( {Q^T}\odot{(W\hat{D}_{hu}^T)}+{P^T}\odot{(H\hat{D}_{hv}^T)} \right) \bsym{1}_{d\times 1}$
+            \State $\hat{D}_h \gets \left(\lambda \hat{D}_h + \begin{bmatrix} Q \bigl(\diag(\hat{\bz}) W \bigr) \, P \bigl ( \diag(\hat{\bz}) H \bigr) \end{bmatrix}\right)\prescript{}{\cdot}{/} M $
+            \State $\alpha \gets \gamma / \langle \hat{D},\hat{D}_h \rangle$
+            \State $\hat{S} \gets\hat{S}+\alpha \hat{D}$
+            \State $R \gets R-\alpha \hat{D}_h$
+            \State $\gamma^{\text{new}} \gets \|R\|_F^2$
+            \State $\beta \gets \gamma^{\text{new}}/\gamma$
+            \State $\hat{D} \gets R+\beta \hat{D}$
+            \State $\gamma \gets \gamma^{\text{new}}$
+        \EndWhile
+        \State Output $S=\hat{S}\prescript{}{\cdot}{/} M$ as the solution.
+    \end{algorithmic}
+\end{algorithm}

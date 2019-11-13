@@ -1,0 +1,29 @@
+\documentclass[border=0pt]{standalone}
+\usepackage{tikz,amssymb,url,amsmath,amsthm,listings,algorithm,algpseudocode,enumerate, caption, xspace, float, verbatim,tabularx,mathtools,adjustbox,pgfplots}
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+\usetikzlibrary{math}
+\usetikzlibrary{shapes.misc}
+\usetikzlibrary{backgrounds}
+\def\bw{{\boldsymbol w}}
+\def\bx{{\boldsymbol x}}
+\def\balpha{{\boldsymbol \alpha}}
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+\tikzset{cross/.style={cross out, draw=black, minimum size=2*(#1-\pgflinewidth), inner sep=0pt, outer sep=0pt},cross/.default={1pt}}
+\begin{document}
+\begin{tikzpicture}[yscale=1,xscale=1,baseline,tight background]
+	\input{algo5-illu-tikzmath}
+	\node at (\gdax,\gday)[left]{$\nabla f(\balpha^1)$};
+	\node at (\gdbx,\gdby)[left]{$\nabla f(\balpha^2)$};
+	\node at (\gdcx-0.4,\gdcy+0.1)[left]{$\vdots$};
+	\node at (\gddx,\gddy)[left]{$\nabla f(\balpha^r)$};
+	\node at (\gdijax,\gdijay)[right]{$(i_1,j_1)$};
+	\node at (\gdijbx,\gdijby)[right]{$(i_2,j_2)$};
+	\node at (\gdijcx+0.32,\gdijcy+0.1)[right]{$\vdots$};
+	\node at (\gdijdx,\gdijdy)[right]{$(i_r,j_r)$};
+	\draw[->] (\gdax,\gday) -- (\gdijax, \gdijay);
+	\draw[->] (\gdbx,\gdby) -- (\gdijbx, \gdijby);
+	\draw[->] (\gddx,\gddy) -- (\gdijdx, \gdijdy);
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,55 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{{\relax \fontsize {14.4}{18}\selectfont 中文摘要}}{i}{section*.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{ABSTRACT}{ii}{section*.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{LIST OF FIGURES}{iv}{section*.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{LIST OF TABLES}{v}{section*.4}
+\defcounter {refsection}{0}\relax 
+\mbox { }\newline \noindent {\bf CHAPTER}\newline 
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {chap}{\numberline {\hbox { }\hfill \bf I.\hspace {5pt}}{\bf Introduction}}{1}{chapter.1}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {chap}{\numberline {\hbox { }\hfill \bf II.\hspace {5pt}}{\bf Newton Method for Unconstrained Minimization }}{3}{chapter.2}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {chap}{\numberline {\hbox { }\hfill \bf III.\hspace {5pt}}{\bf Newton Methods for Factorization Machines}}{5}{chapter.3}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.1}Gradient Calculation}{6}{section.3.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.2}Hessian and Gauss-Newton Matrices}{8}{section.3.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.3}Implementation of Line Search}{9}{section.3.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.4}Overall Procedure}{10}{section.3.4}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.5}Implementation for Matrix Factorization}{12}{section.3.5}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {chap}{\numberline {\hbox { }\hfill \bf IV.\hspace {5pt}}{\bf A Review of Alternating Newton Methods}}{17}{chapter.4}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {chap}{\numberline {\hbox { }\hfill \bf V.\hspace {5pt}}{\bf Experiments}}{21}{chapter.5}
+\defcounter {refsection}{0}\relax 
+\hbox { }
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.1}Experimental Settings}{21}{section.5.1}

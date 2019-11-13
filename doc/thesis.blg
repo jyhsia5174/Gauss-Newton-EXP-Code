@@ -1,0 +1,67 @@
+This is BibTeX, Version 0.99d (TeX Live 2015/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: thesis.aux
+The style file: biblatex.bst
+I couldn't open database file thesis.bib
+---line 5 of file thesis.aux
+ : \bibdata{thesis-blx,sdp,thesis
+ :                               }
+I'm skipping whatever remains of this command
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: thesis-blx.bib
+Database file #2: sdp.bib
+Biblatex version: 3.3
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 9000 items from 6000.
+You've used 6 entries,
+            6047 wiz_defined-function locations,
+            1164 strings with 9199 characters,
+and the built_in function-call counts, 15962 in all, are:
+= -- 571
+> -- 501
+< -- 86
++ -- 166
+- -- 190
+* -- 1260
+:= -- 1173
+add.period$ -- 0
+call.type$ -- 6
+change.case$ -- 40
+chr.to.int$ -- 34
+cite$ -- 10
+duplicate$ -- 1766
+empty$ -- 1774
+format.name$ -- 357
+if$ -- 3538
+int.to.chr$ -- 0
+int.to.str$ -- 10
+missing$ -- 0
+newline$ -- 174
+num.names$ -- 190
+pop$ -- 1686
+preamble$ -- 1
+purify$ -- 61
+quote$ -- 0
+skip$ -- 839
+stack$ -- 0
+substring$ -- 314
+swap$ -- 583
+text.length$ -- 117
+text.prefix$ -- 0
+top$ -- 1
+type$ -- 216
+warning$ -- 0
+while$ -- 131
+width$ -- 0
+write$ -- 167
+(There was 1 error message)

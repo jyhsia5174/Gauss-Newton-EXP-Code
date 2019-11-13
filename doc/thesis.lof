@@ -1,0 +1,11 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\defcounter {refsection}{0}\relax 
+\noindent \relax $\@@underline {\hbox {\bf Figure}}\mathsurround \z@ $\relax \hfill \rm \newline 
+\defcounter {refsection}{0}\relax 
+\contentsline {figure}{\numberline {5.1}{\ignorespaces A comparison on the va-loss of different methods. ANT is worse than Gauss among smaller $\lambda $. The $x$-axis is the iteration, while the $y$-axis is the va-loss.\relax }}{22}{figure.caption.6}
+\defcounter {refsection}{0}\relax 
+\contentsline {figure}{\numberline {5.2}{\ignorespaces A comparison on the va-loss of different methods. The $x$-axis is the iteration, while the $y$-axis is the va-loss.\relax }}{23}{figure.caption.7}
+\defcounter {refsection}{0}\relax 
+\contentsline {figure}{\numberline {5.3}{\ignorespaces ml-1m. A comparison on the va-loss of different $\lambda $. The $x$-axis is the iteration, while the $y$-axis is the va-loss.\relax }}{24}{figure.caption.8}
+\defcounter {refsection}{0}\relax 
+\contentsline {figure}{\numberline {5.4}{\ignorespaces ml-1m. A comparison on the best va-loss of different methods. The $x$-axis is $\lambda $, while the $y$-axis is the va-loss.\relax }}{25}{figure.caption.9}

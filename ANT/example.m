@@ -6,7 +6,7 @@
 %tr = 'ml.tr'; va = 'ml.te';
 
 % set training algorithm's parameters
-%epsilon = 1e-6; 
+%epsilon = 1e-6;
 do_pcond = false;
 
 % prepare training and test data sets
@@ -31,8 +31,8 @@ U_reg = sum(W)'*lambda_U;
 V_reg = sum(H)'*lambda_V;
 
 % learn an FM model
-[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
-
+%[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
+[U, V] = fm_train(y, W, H, U_reg, V_reg, d, max_iter, do_pcond, y_test, W_test, H_test);
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);
 %display(sprintf('test accuracy: %f', sum(sign(y_tilde) == y_test)/size(y_test,1)));

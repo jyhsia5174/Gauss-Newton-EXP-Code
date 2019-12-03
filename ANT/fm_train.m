@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
+function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, max_iter, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
@@ -31,20 +31,14 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     loss = 0.5*sum(b.*b);
 
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
-    G_norm_0 = 0; G_norm = 0;
+%    G_norm_0 = 0;
+	G_norm = 0;
 
     fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|grad|', 'va_loss', '|UV_Grad|', 'loss');
     for k = 1:max_iter
-        if (k == 1)
-            GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
-            GV = V*sparse([1:n], [1:n], V_reg)+(U*W')*sparse([1:l], [1:l], b)*H;
-            G_norm = norm([GU GV]);
-            G_norm_0 = G_norm;
-            fprintf('Warning: %15.6f\n', G_norm_0);
-        end
-    
-        [U, y_tilde, b, f, loss, nt_iters_U, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, U_reg, do_pcond);
-        
+
+        [U, y_tilde, b, f, loss, G_norm_U, cg_iters_U] = update_block(y, W, U, V*H', y_tilde, b, f, loss, U_reg, do_pcond);
+
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
         GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
@@ -52,87 +46,93 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
         G_norm = norm([GU GV]);
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_U, f, G_norm_U, va_loss, G_norm, loss);
 
-        [V, y_tilde, b, f, loss, nt_iters_V, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, V_reg, do_pcond);
+        [V, y_tilde, b, f, loss, G_norm_V, cg_iters_V] = update_block(y, H, V, U*W', y_tilde, b, f, loss, V_reg, do_pcond);
         y_test_tilde = fm_predict( W_test, H_test, U, V);
         va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
         GU = U*sparse([1:m], [1:m], U_reg)+(V*H')*sparse([1:l], [1:l], b)*W;
         GV = V*sparse([1:n], [1:n], V_reg)+(U*W')*sparse([1:l], [1:l], b)*H;
         G_norm = norm([GU GV]);
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, va_loss, G_norm, loss);
-        
-        if (G_norm <= epsilon*G_norm_0)
-            break;
-        end
+
         if (k == max_iter)
             fprintf('Warning: reach max training iteration. Terminate training process.\n');
         end
     end
 end
 
-% See Algorithm 3 in the paper. 
-function [U, y_tilde, b, f, loss, nt_iters, G_norm, total_cg_iters] = update_block(y, W, U, Q, y_tilde, b, f, loss, lambda_freq, do_pcond)
-    epsilon = 0.8;
-    max_nt_iter = 100;
+% See Algorithm 3 in the paper.
+function [U, y_tilde, b, f, loss, G_norm, cg_iters] = update_block(y, W, U, Q, y_tilde, b, f, loss, lambda_freq, do_pcond)
     l = size(W,1);
     m = size(U,2);
-    G0_norm = 0;
-    total_cg_iters = 0;
-    nt_iters = 0;
-    for k = 1:max_nt_iter
-        G = U*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], b)*W;
-        G_norm = sqrt(sum(sum(G.*G)));
-        if (k == 1)
-            G0_norm = G_norm;
-        end
-        if (G_norm <= epsilon*G0_norm)
-            return;
-        end
-        nt_iters = k;
-        if (k == max_nt_iter)
-            fprintf('Warning: reach newton iteration bound before gradient norm is shrinked enough.\n');
-        end
-        [S, cg_iters] = pcg(W, Q, G, lambda_freq);
-        total_cg_iters = total_cg_iters+cg_iters;
+    zeta = 0.3;
+    cg_max_iter = 20;
 
-        Delta = (sum(Q.*(S*W'),1))';
-        US = sum(U.*S); SS = sum(S.*S);
-        y_tilde = y_tilde+Delta;
-        b = y_tilde - y;
-        loss_new = 0.5*sum(b .* b);
-        f_diff = 0.5*((2*US+SS)*lambda_freq)+loss_new-loss;
-        loss = loss_new;
-        f = f+f_diff;
-        U = U+S;
-    end
+	G = U*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], b)*W;
+	G_norm = sqrt(sum(sum(G.*G)));
+
+	s_bar = zeros(size(G));
+	c = -G;
+	d = c;
+	G0G0 = sum(sum(c.*c));
+	gamma = G0G0;
+	cg_iters = 0;
+	while (gamma > zeta*zeta*G0G0)
+		cg_iters = cg_iters+1;
+		z = sum(Q.*(d*W'),1);
+		Dh = d*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
+		alpha = gamma/sum(sum(d.*Dh));
+		s_bar = s_bar+alpha*d;
+		c = c-alpha*Dh;
+		gamma_new = sum(sum(c.*c));
+		beta = gamma_new/gamma;
+		d = c+beta*d;
+		gamma = gamma_new;
+		if (cg_iters >= cg_max_iter)
+			fprintf('Warning: reach max CG iteration. CG process is terminated.\n');
+			break;
+		end
+	end
+	S = s_bar;
+
+	Delta = (sum(Q.*(S*W'),1))';
+	US = sum(U.*S);
+	SS = sum(S.*S);
+	y_tilde = y_tilde+Delta;
+	b = y_tilde - y;
+	loss_new = 0.5*sum(b .* b);
+	f_diff = 0.5*((2*US+SS)*lambda_freq)+loss_new-loss;
+	loss = loss_new;
+	f = f+f_diff;
+	U = U+S;
 end
 
 % See Algorithm 4 in the paper.
-function [S, cg_iters] = pcg(W, Q, G, lambda_freq)
-    zeta = 0.3;
-    cg_max_iter = 20;
-    l = size(W,1);
-    m = size(G,2);
-    s_bar = zeros(size(G));
-    r = -G;
-    d = r;
-    G0G0 = sum(sum(r.*r));
-    gamma = G0G0;
-    cg_iters = 0;
-    while (gamma > zeta*zeta*G0G0)
-        cg_iters = cg_iters+1;
-        z = sum(Q.*(d*W'),1);
-        Dh = d*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
-        alpha = gamma/sum(sum(d.*Dh));
-        s_bar = s_bar+alpha*d;
-        r = r-alpha*Dh;
-        gamma_new = sum(sum(r.*r));
-        beta = gamma_new/gamma;
-        d = r+beta*d;
-        gamma = gamma_new;
-        if (cg_iters >= cg_max_iter)
-            fprintf('Warning: reach max CG iteration. CG process is terminated.\n');
-            break;
-        end
-    end
-    S = s_bar;
-end
+%function [S, cg_iters] = pcg(W, Q, G, lambda_freq)
+%    zeta = 0.3;
+%    cg_max_iter = 20;
+%    l = size(W,1);
+%    m = size(G,2);
+%    s_bar = zeros(size(G));
+%    c = -G;
+%    d = c;
+%    G0G0 = sum(sum(c.*c));
+%    gamma = G0G0;
+%    cg_iters = 0;
+%    while (gamma > zeta*zeta*G0G0)
+%        cg_iters = cg_iters+1;
+%        z = sum(Q.*(d*W'),1);
+%        Dh = d*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
+%        alpha = gamma/sum(sum(d.*Dh));
+%        s_bar = s_bar+alpha*d;
+%        c = c-alpha*Dh;
+%        gamma_new = sum(sum(c.*c));
+%        beta = gamma_new/gamma;
+%        d = c+beta*d;
+%        gamma = gamma_new;
+%        if (cg_iters >= cg_max_iter)
+%            fprintf('Warning: reach max CG iteration. CG process is terminated.\n');
+%            break;
+%        end
+%    end
+%    S = s_bar;
+%end

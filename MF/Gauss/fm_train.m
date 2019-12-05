@@ -40,16 +40,15 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
         B = Y_tilde - Y;
         G = [U*sparse([1:m], [1:m], U_reg) V*sparse([1:n], [1:n], V_reg)] + [V*((B.*IR)') U*(B.*IR)];
 
-
         G_norm = sqrt(sum(sum(G.*G)));
         if (k == 1)
             G_norm_0 = G_norm;
             fprintf('Warning: %15.6f\n', G_norm_0);
         end
 
-		if (G_norm <= epsilon*G_norm_0)
-			break;
-		end
+        if (G_norm <= epsilon*G_norm_0)
+            break;
+        end
 
         [U, V, Y_tilde, B, f, loss, cg_iters] = update(Y, W, H, U, V, Y_tilde, B, IR, f, loss, U_reg, V_reg, G);
 
@@ -89,7 +88,7 @@ function [U, V, Y_tilde, B, f, loss, total_cg_iters] = update(Y, W, H, U, V, Y_t
 
     US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg;
     SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg];
-	GS = sum(sum(G.*[Su Sv]));
+    GS = sum(sum(G.*[Su Sv]));
     theta = 1;
     while (true)
         if (theta < min_step_size)

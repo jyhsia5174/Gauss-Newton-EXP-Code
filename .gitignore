@@ -10,3 +10,14 @@
 
 # data
 data/*
+*.tr
+*.va
+*.te
+*.trva
+
+# tmp
+*.swp
+
+# logs
+logs
+

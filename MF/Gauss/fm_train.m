@@ -132,6 +132,9 @@ function [Su, Sv, cg_iters] = cg(W, H, U, V, IR, G, U_reg, V_reg)
         cg_iters = cg_iters+1;
 
         [Z] = get_cross_embedding_inner(d(:,1:m), d(:,m+1:end), U, V, IR);
+
+        %diff = sum(sum( Z - Z_))
+
         Dh = d*lambda_freq + [V*((Z.*IR)') U*(Z.*IR)];
         alpha = gamma/sum(sum(d.*Dh));
         s_bar = s_bar+alpha*d;
@@ -152,21 +155,37 @@ end
 % (H*V')./(W*Su')+(W*U')./(H*Sv')
 function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
     [m, n] = size(IR);
-    nnz_num = nnz(IR);
-    z_i = {}; z_j = {}; z_val = {};
-    parfor j = 1:n
-        [i_idxs, j_idxs, dummy] = find(IR(:, j));
-        vals = V(:,j)'*Su(:,i_idxs) + Sv(:,j)'*U(:,i_idxs);
-        j_idxs(1:end) = j;
-        z_i{j} = i_idxs;
-        z_j{j} = j_idxs;
-        z_val{j} = vals';
-    end
-    Z_i = cat(1, z_i{:});
-    Z_j = cat(1, z_j{:});
-    Z_val = cat(1, z_val{:});
-    Z = sparse(Z_i, Z_j, Z_val, m, n);
+    [i_idx, j_idx, vals] = find(IR);
+    l = nnz(IR);
+    num_batches = 10;
+    bsize = ceil(l/num_batches);
+
+    for i = 1: num_batches
+        range = (i - 1) * bsize + 1 : min(l, i * bsize);
+        vals(range) = sum( V(:, j_idx(range)) .*Su(:, i_idx(range)) + Sv(:, j_idx(range)).*U(:, i_idx(range)) , 1);
+    end 
+
+    Z = sparse(i_idx, j_idx, vals, m, n);
 end
+
+%% (H*V')./(W*Su')+(W*U')./(H*Sv')
+%function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
+%    [m, n] = size(IR);
+%    nnz_num = nnz(IR);
+%    z_i = {}; z_j = {}; z_val = {};
+%    parfor j = 1:n
+%        [i_idxs, j_idxs, dummy] = find(IR(:, j));
+%        vals = V(:,j)'*Su(:,i_idxs) + Sv(:,j)'*U(:,i_idxs);
+%        j_idxs(1:end) = j;
+%        z_i{j} = i_idxs;
+%        z_j{j} = j_idxs;
+%        z_val{j} = vals';
+%    end
+%    Z_i = cat(1, z_i{:});
+%    Z_j = cat(1, z_j{:});
+%    Z_val = cat(1, z_val{:});
+%    Z = sparse(Z_i, Z_j, Z_val, m, n);
+%end
 
 % (W*Su) ./ (H*Sv)
 function [Z] = get_embedding_inner(U, V, IR)

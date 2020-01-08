@@ -27,7 +27,7 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
     nu = 0.1;
     min_step_size = 1e-20;
 
-    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', '#ls', 'obj', '|grad|', 'va_loss', '|GV|', '|GV|', 'loss');
+    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', '#ls', 'obj', '|G|', 'test_loss', '|G_V|', '|G_V|', 'loss');
     for k = 1:max_iter
         if (k == 1)
             B = get_embedding_inner(U, V, IR) - R;
@@ -36,14 +36,14 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
             f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
             G_norm = norm(G,'fro');
             G_norm_0 = G_norm;
-            fprintf('initial G_noem: %15.6f\n', G_norm_0);
+            fprintf('initial G_norm: %15.6f\n', G_norm_0);
         end
 
         if (G_norm <= epsilon*G_norm_0)
             break;
         end
 
-        [Su, Sv, cg_iters] = cg(R, U, V, IR, G, U_reg, V_reg);
+        [Su, Sv, cg_iters] = cg(U, V, IR, G, U_reg, V_reg);
 
         Delta_1 = get_cross_embedding_inner(Su, Sv, U, V, IR);
         Delta_2 = get_embedding_inner(Su, Sv, IR);
@@ -51,8 +51,7 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
         SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg];
         GS = sum(sum(G.*[Su Sv]));
         theta = 1;
-        ls_steps = 1;
-        while (true)
+        for ls_steps = 1:1:intmax;
             if (theta < min_step_size)
                 fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
                 return;
@@ -69,17 +68,16 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
                  break;
             end
             theta = theta*0.5;
-            ls_steps = ls_steps+1;
         end
 
         y_test_tilde = fm_predict( W_test, H_test, U, V);
-        va_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        test_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*((B.*IR)') U*(B.*IR)];
         G_norm = norm(G,'fro');
         GU_norm = norm(G(:, 1:m),'fro');
         GV_norm = norm(G(:, m+1:end),'fro');
 
-        fprintf('%4d  %15.3f  %3d  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters, ls_steps, f, G_norm, va_loss, GU_norm, GV_norm, loss);
+        fprintf('%4d  %15.3f  %3d  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters, ls_steps, f, G_norm, test_loss, GU_norm, GV_norm, loss);
     end
     if (k == max_iter)
         fprintf('Warning: reach max training iteration. Terminate training process.\n');
@@ -87,60 +85,11 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
 
 end
 
-% See Algorithm 3 in the paper.
-%function [U, V, B, f, loss, total_cg_iters, ls_steps] = update(Y, W, H, U, V, B, IR, f, loss, U_reg, V_reg, G)
-%%    epsilon = 0.8;
-%    nu = 0.1;
-%    min_step_size = 1e-20;
-%    l = size(W,1); m = size(U,2); n = size(V,2);
-%    total_cg_iters = 0;
-%
-%    [Su, Sv, cg_iters] = cg(W, H, U, V, IR, G, U_reg, V_reg);
-%    total_cg_iters = total_cg_iters+cg_iters;
-%
-%%    WS_u = (Su*W');
-%%    HS_v = (Sv*H');
-%    Delta_1 = get_cross_embedding_inner(Su, Sv, U, V, IR);
-%    Delta_2 = get_embedding_inner(Su, Sv, IR);
-%
-%    US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg;
-%    SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg];
-%   GS = sum(sum(G.*[Su Sv]));
-%    theta = 1;
-%   ls_steps = 1;
-%    while (true)
-%        if (theta < min_step_size)
-%            fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
-%            return;
-%        end
-%%        Y_tilde_new = Y_tilde+theta*Delta_1+theta*theta*Delta_2;
-%%        B_new = Y_tilde_new-Y;
-%       B_new = B+theta*Delta_1+theta*theta*Delta_2;
-%        loss_new = 0.5*full(sum(sum(B_new.*B_new)));
-%        f_diff = 0.5*(2*theta*(US_u+VS_v)+theta*theta*SS)+loss_new-loss;
-%        if (f_diff <= nu*theta*GS)
-%            loss = loss_new;
-%            f = f+f_diff;
-%            U = U+theta*Su;
-%            V = V+theta*Sv;
-%%            Y_tilde = Y_tilde_new;
-%            B = B_new;
-%            break;
-%        end
-%        theta = theta*0.5;
-%       ls_steps = ls_steps+1;
-%    end
-%%    if (theta ~= 1)
-%%        fprintf('Warning: Doing line search %14.10f\n', theta);
-%%    end
-%
-%end
-
 % See Algorithm 4 in the paper.
-function [Su, Sv, cg_iters] = cg(R, U, V, IR, G, U_reg, V_reg)
+function [Su, Sv, cg_iters] = cg(U, V, IR, G, U_reg, V_reg)
     eta = 0.3;
     cg_max_iter = 20;
-    [m, n] = size(R);
+    [m, n] = size(IR);
     S = zeros(size(G));
     C = -G;
     D = C;
@@ -150,7 +99,7 @@ function [Su, Sv, cg_iters] = cg(R, U, V, IR, G, U_reg, V_reg)
     reg = spdiags([U_reg ; V_reg], 0, size(G,2), size(G,2));
     while (gamma > eta*eta*gamma_0)
         cg_iters = cg_iters+1;
-        [Z] = get_cross_embedding_inner(D(:,1:m), D(:,m+1:end), U, V, IR);
+        Z = get_cross_embedding_inner(D(:,1:m), D(:,m+1:end), U, V, IR);
         Dh = D*reg + [V*((Z.*IR)') U*(Z.*IR)];
         alpha = gamma/sum(sum(D.*Dh));
         S = S+alpha*D;
@@ -175,12 +124,10 @@ function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
     l = nnz(IR);
     num_batches = 10;
     bsize = ceil(l/num_batches);
-
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
         vals(range) = sum( V(:, j_idx(range)) .*Su(:, i_idx(range)) + Sv(:, j_idx(range)).*U(:, i_idx(range)) , 1);
     end 
-
     Z = sparse(i_idx, j_idx, vals, m, n);
 end
 
@@ -191,12 +138,10 @@ function [Z] = get_embedding_inner(U, V, IR)
     l = nnz(IR);
     num_batches = 10;
     bsize = ceil(l/num_batches);
-
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
         vals(range) = sum( V(:, j_idx(range)) .*U(:, i_idx(range)) , 1);
     end 
-
     Z = sparse(i_idx, j_idx, vals, m, n);
 end
 

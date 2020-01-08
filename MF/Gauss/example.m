@@ -31,8 +31,21 @@ U_reg = sum(W)'*lambda_U;
 V_reg = sum(H)'*lambda_V;
 
 % learn an FM model
-[U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
+R = init_Y(W,H,y);
+[U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);
 %display(sprintf('test accuracy: %f', sum(sign(y_tilde) == y_test)/size(y_test,1)));
+
+function [Y] = init_Y(W, H, y)
+    [l, m] = size(W);
+    [l, n] = size(H);
+    [wi, wj, wv] = find(W);
+    [hi, hj, hv] = find(H);
+    wij = sortrows(cat(2,wi, wj));
+    hij = sortrows(cat(2,hi, hj));
+    Y = sparse(wij(:, 2), hij(:, 2), y, m, n);
+end
+
+

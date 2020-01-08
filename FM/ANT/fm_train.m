@@ -1,7 +1,6 @@
 function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
-% function [w, U, V] = fm_train(y, X, lambda_w, lambda_U, lambda_V, d, epsilon, do_pcond, sub_rate)
 % Inputs:
 %   y: training labels, an l-dimensional binary vector. Each element should be either +1 or -1.
 %   X: training instances. X is an l-by-n matrix if you have l training instances in an n-dimensional feature space.
@@ -33,6 +32,11 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
     G_norm_0 = 0;
 	G_norm = 0;
+
+%	global Q;
+%	global P;
+%	Q = V*H';
+%	P = U*W';
 
     fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|grad|', 'va_loss', '|UV_Grad|', 'loss');
     for k = 1:max_iter
@@ -76,46 +80,49 @@ end
 function [U, y_tilde, b, f, loss, G_norm, cg_iters] = update_block(y, W, U, Q, y_tilde, b, f, loss, lambda_freq, do_pcond)
     l = size(W,1);
     m = size(U,2);
-    zeta = 0.3;
+    eta = 0.3;
     cg_max_iter = 20;
 
 	G = U*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], b)*W;
 	G_norm = sqrt(sum(sum(G.*G)));
 
-	s_bar = zeros(size(G));
-	c = -G;
-	d = c;
-	G0G0 = sum(sum(c.*c));
-	gamma = G0G0;
+	Su = zeros(size(G));
+	C = -G;
+	D = C;
+	gamma_0 = sum(sum(C.*C));
+	gamma = gamma_0;
 	cg_iters = 0;
-	while (gamma > zeta*zeta*G0G0)
+	while (gamma > eta*eta*gamma_0)
 		cg_iters = cg_iters+1;
-		z = sum(Q.*(d*W'),1);
-		Dh = d*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
-		alpha = gamma/sum(sum(d.*Dh));
-		s_bar = s_bar+alpha*d;
-		c = c-alpha*Dh;
-		gamma_new = sum(sum(c.*c));
+		z = sum(Q.*(D*W'),1);
+		Dh = D*sparse([1:m], [1:m], lambda_freq)+Q*sparse([1:l], [1:l], z)*W;
+		alpha = gamma/sum(sum(D.*Dh));
+		Su = Su+alpha*D;
+		C = C-alpha*Dh;
+		gamma_new = sum(sum(C.*C));
 		beta = gamma_new/gamma;
-		d = c+beta*d;
+		D = C+beta*D;
 		gamma = gamma_new;
 		if (cg_iters >= cg_max_iter)
 			fprintf('Warning: reach max CG iteration. CG process is terminated.\n');
 			break;
 		end
 	end
-	S = s_bar;
+%	S = s_bar;
 
-	Delta = (sum(Q.*(S*W'),1))';
-	US = sum(U.*S);
-	SS = sum(S.*S);
-	y_tilde = y_tilde+Delta;
-	b = y_tilde - y;
-	loss_new = 0.5*sum(b .* b);
-	f_diff = 0.5*((2*US+SS)*lambda_freq)+loss_new-loss;
-	loss = loss_new;
+	Delta = (sum(Q.*(Su*W'),1))';
+	b_new = b+Delta;
+	USu = sum(U.*Su);
+	SuSu = sum(Su.*Su);
+%	b = y_tilde - y;
+	loss_new = 0.5*sum(b_new .* b_new);
+	f_diff = 0.5*((2*USu+SuSu)*lambda_freq)+loss_new-loss;
 	f = f+f_diff;
-	U = U+S;
+	U = U+Su;
+	y_tilde = y_tilde+Delta;
+	b = b_new;
+	loss = loss_new;
+%	P = P+Su*W';
 end
 
 % See Algorithm 4 in the paper.

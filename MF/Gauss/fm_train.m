@@ -1,4 +1,4 @@
-function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
+function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -16,10 +16,8 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     tic;
 %    max_iter = 100;
 
-    [l, m] = size(W);
-    [l, n] = size(H);
-    IR = W'*H;
-    Y = init_Y(W, H, y);
+    IR = spones(R);
+    [m, n] = size(R);
 
     rand('seed', 0);
 
@@ -32,7 +30,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
     fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', '#ls', 'obj', '|grad|', 'va_loss', '|GV|', '|GV|', 'loss');
     for k = 1:max_iter
         if (k == 1)
-            B = get_embedding_inner(U, V, IR) - Y;
+            B = get_embedding_inner(U, V, IR) - R;
             loss = 0.5 * full(sum(sum(B .* B)));
             G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*((B.*IR)') U*(B.*IR)];
             f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
@@ -45,9 +43,7 @@ function [U, V] = fm_train(y, W, H, U_reg, V_reg, d, epsilon, max_iter, do_pcond
             break;
         end
 
-%       l = size(W,1); m = size(U,2); n = size(V,2);
-
-        [Su, Sv, cg_iters] = cg(W, H, U, V, IR, G, U_reg, V_reg);
+        [Su, Sv, cg_iters] = cg(R, U, V, IR, G, U_reg, V_reg);
 
         Delta_1 = get_cross_embedding_inner(Su, Sv, U, V, IR);
         Delta_2 = get_embedding_inner(Su, Sv, IR);
@@ -141,10 +137,10 @@ end
 %end
 
 % See Algorithm 4 in the paper.
-function [Su, Sv, cg_iters] = cg(W, H, U, V, IR, G, U_reg, V_reg)
+function [Su, Sv, cg_iters] = cg(R, U, V, IR, G, U_reg, V_reg)
     eta = 0.3;
     cg_max_iter = 20;
-    [l, m] = size(W);
+    [m, n] = size(R);
     S = zeros(size(G));
     C = -G;
     D = C;
@@ -243,16 +239,16 @@ end
 %    Z = sparse(Z_i, Z_j, Z_val, m, n);
 %end
 
-% (W*Su) ./ (H*Sv)
-function [Y] = init_Y(W, H, y)
-    [l, m] = size(W);
-    [l, n] = size(H);
-    [wi, wj, wv] = find(W);
-    [hi, hj, hv] = find(H);
-    wij = sortrows(cat(2,wi, wj));
-    hij = sortrows(cat(2,hi, hj));
-    Y = sparse(wij(:, 2), hij(:, 2), y, m, n);
-end
+%% (W*Su) ./ (H*Sv)
+%function [Y] = init_Y(W, H, y)
+%    [l, m] = size(W);
+%    [l, n] = size(H);
+%    [wi, wj, wv] = find(W);
+%    [hi, hj, hv] = find(H);
+%    wij = sortrows(cat(2,wi, wj));
+%    hij = sortrows(cat(2,hi, hj));
+%    Y = sparse(wij(:, 2), hij(:, 2), y, m, n);
+%end
 
 %function [Z] = get_cross_embedding_inner_mat_v2(Su, Sv, U, V, IR)
 %    tic;

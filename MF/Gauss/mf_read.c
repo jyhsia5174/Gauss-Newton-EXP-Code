@@ -18,10 +18,23 @@ typedef int mwIndex;
 #define min(x,y) (((x)<(y))?(x):(y))
 #endif
 
+
+struct rate{
+    int user_id, item_id;
+    double score;
+};
+
+int compare(const void * a, const void * b){
+    if( (*(struct rate*)a).item_id > (*(struct rate*)b).item_id )
+        return 1;
+    else
+        return -1;
+}
+
 void exit_with_help()
 {
     mexPrintf(
-    "Usage: [label_vector, instance_matrix] = libsvmread('filename');\n"
+    "Usage: [R] = libsvmread('filename');\n"
     );
 }
 
@@ -53,14 +66,14 @@ static char* readline(FILE *input)
     return line;
 }
 
-// read in a problem (in libsvm format)
+/* read in a problem (in libsvm format)*/
 void read_problem(const char *filename, int nlhs, mxArray *plhs[])
 {
     int max_user_id=0, max_item_id=0;
     size_t l=0;
     FILE *fp = fopen(filename,"r");
-    double *u_feats, *i_feats, *scores;
-    mwIndex *u_ir, *u_jc, *i_ir, *i_jc;
+    double *pr;
+    mwIndex *ir, *jc;
 
     if(fp == NULL)
     {
@@ -90,23 +103,12 @@ void read_problem(const char *filename, int nlhs, mxArray *plhs[])
     }
     rewind(fp);
 
-    // y
-    plhs[0] = mxCreateDoubleMatrix(l, 1, mxREAL);
-    // U
-    plhs[1] = mxCreateSparse(max_user_id, l, l, mxREAL);
-    // V
-    plhs[2] = mxCreateSparse(max_item_id, l, l, mxREAL);
-
-    //y pointer
-    scores = mxGetPr(plhs[0]);
-    //U pointer
-    u_feats = mxGetPr(plhs[1]);
-    u_ir = mxGetIr(plhs[1]);
-    u_jc = mxGetJc(plhs[1]);
-    //V pointer
-    i_feats = mxGetPr(plhs[2]);
-    i_ir = mxGetIr(plhs[2]);
-    i_jc = mxGetJc(plhs[2]);
+    struct rate* ratings = malloc( sizeof(struct rate) * l); 
+    /* R */
+    plhs[0] = mxCreateSparse(max_user_id, max_item_id, l, mxREAL);
+    pr = mxGetPr(plhs[0]);
+    ir = mxGetIr(plhs[0]);
+    jc = mxGetJc(plhs[0]);
 
     int i = 0;
     while(readline(fp) != NULL)
@@ -119,42 +121,27 @@ void read_problem(const char *filename, int nlhs, mxArray *plhs[])
         i_id = strtok(NULL," \t");
         score = strtok(NULL," \t");
 
-        user_id = atoi(u_id);
-        item_id = atoi(i_id);
-        d_score = atof(score);
-
-        //Set y
-        scores[i] = d_score;
-        //Set U
-        u_jc[i] = i;
-        u_ir[i] = user_id-1;
-        u_feats[i] = 1;
-        //Set V
-        i_jc[i] = i;
-        i_ir[i] = item_id-1;
-        i_feats[i] = 1;
-
+        ratings[i].user_id = atoi(u_id);
+        ratings[i].item_id = atoi(i_id);
+        ratings[i].score = atof(score);
+       
+        jc[atoi(i_id)] += 1;
         i++;
     }
-    u_jc[i] = i;
-    i_jc[i] = i;
+
+    for(i=1; i <= max_item_id; i++)
+        jc[i] = jc[i] + jc[i-1];
+
+    qsort(ratings, l, sizeof(struct rate), compare);
+
+    for(i=0; i < l ; i++){
+        ir[i] = ratings[i].user_id - 1;
+        pr[i] = ratings[i].score;
+    }
 
     fclose(fp);
     free(line);
-
-    for(i=1; i<3; i++)
-    {
-        mxArray *rhs[1], *lhs[1];
-        rhs[0] = plhs[i];
-        if(mexCallMATLAB(1, lhs, 1, rhs, "transpose"))
-        {
-            mexPrintf("Error: cannot transpose problem\n");
-            fake_answer(nlhs, plhs);
-            return;
-        }
-        plhs[i] = lhs[0];
-        mxDestroyArray(rhs[0]);
-    }
+    free(ratings);
 }
 
 void mexFunction( int nlhs, mxArray *plhs[],
@@ -162,7 +149,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 {
     char filename[256];
 
-    if(nrhs != 1 || nlhs != 3)
+    if(nrhs != 1 || nlhs != 1)
     {
         exit_with_help();
         fake_answer(nlhs, plhs);

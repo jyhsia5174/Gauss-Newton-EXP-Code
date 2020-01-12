@@ -1,4 +1,4 @@
-function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test)
+function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -16,8 +16,9 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
     tic;
 %    max_iter = 100;
 
-    IR = spones(R);
+    IR_test = spones(R_test);
     [m, n] = size(R);
+    l_test = nnz(R_test);
 
     rand('seed', 0);
 
@@ -70,8 +71,9 @@ function [U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_te
             theta = theta*0.5;
         end
 
-        y_test_tilde = fm_predict( W_test, H_test, U, V);
-        test_loss = mean((y_test - y_test_tilde) .* (y_test - y_test_tilde));
+        Y_test_tilde = get_embedding_inner(U,V,IR_test);
+        test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/l_test);
+        
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*((B.*IR)') U*(B.*IR)];
         G_norm = norm(G,'fro');
         GU_norm = norm(G(:, 1:m),'fro');

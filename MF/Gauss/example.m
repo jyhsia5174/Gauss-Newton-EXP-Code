@@ -10,42 +10,24 @@
 do_pcond = false;
 
 % prepare training and test data sets
-[y, W, H] = libsvmread(tr);
-[y_test,W_test, H_test] = libsvmread(va);
+R = mf_read(tr);
+R_test = mf_read(va);
+m = max(size(R,1),size(R_test,1));
+n = max(size(R,2),size(R_test,2));
+[i,j,s] = find(R);
+R = sparse(i,j,s,m,n);
+[i,j,s] = find(R_test);
+R_test = sparse(i,j,s,m,n);
 
-
-n = max(size(W,2),size(W_test,2));
-[i,j,s] = find(W);
-W = sparse(i,j,s,size(W,1),n);
-[i,j,s] = find(W_test);
-W_test = sparse(i,j,s,size(W_test,1),n);
-
-n = max(size(H,2),size(H_test,2));
-[i,j,s] = find(H);
-H = sparse(i,j,s,size(H,1),n);
-[i,j,s] = find(H_test);
-H_test = sparse(i,j,s,size(H_test,1),n);
 
 %Init freq regularization
-U_reg = sum(W)'*lambda_U;
-V_reg = sum(H)'*lambda_V;
+IR=spones(R);
+U_reg = sum(IR')'*lambda_U;
+V_reg = sum(IR)'*lambda_V;
 
 % learn an FM model
-R = init_Y(W,H,y);
-[U, V] = fm_train(R, U_reg, V_reg, d, epsilon, max_iter, do_pcond, y_test, W_test, H_test);
+[U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);
 %display(sprintf('test accuracy: %f', sum(sign(y_tilde) == y_test)/size(y_test,1)));
-
-function [Y] = init_Y(W, H, y)
-    [l, m] = size(W);
-    [l, n] = size(H);
-    [wi, wj, wv] = find(W);
-    [hi, hj, hv] = find(H);
-    wij = sortrows(cat(2,wi, wj));
-    hij = sortrows(cat(2,hi, hj));
-    Y = sparse(wij(:, 2), hij(:, 2), y, m, n);
-end
-
-

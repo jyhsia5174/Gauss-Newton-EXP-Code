@@ -128,7 +128,7 @@ function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
     bsize = ceil(l/num_batches);
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
-        vals(range) = sum( V(:, j_idx(range)) .*Su(:, i_idx(range)) + Sv(:, j_idx(range)).*U(:, i_idx(range)) , 1);
+        vals(range) = dot( V(:, j_idx(range)) ,Su(:, i_idx(range))) + dot(Sv(:, j_idx(range)),U(:, i_idx(range)));
     end 
     Z = sparse(i_idx, j_idx, vals, m, n);
 end
@@ -142,7 +142,7 @@ function [Z] = get_embedding_inner(U, V, IR)
     bsize = ceil(l/num_batches);
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
-        vals(range) = sum( V(:, j_idx(range)) .*U(:, i_idx(range)) , 1);
+        vals(range) = dot( V(:, j_idx(range)), U(:, i_idx(range)) );
     end 
     Z = sparse(i_idx, j_idx, vals, m, n);
 end

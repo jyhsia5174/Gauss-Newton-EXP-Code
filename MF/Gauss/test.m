@@ -25,13 +25,13 @@ R = sparse(i,j,s,m,n);
 R_test = sparse(i,j,s,m,n);
 
 %Init freq regularization
-IR=spones(R);
+IR = spones(R);
 U_reg = sum(IR')'*lambda_U;
 V_reg = sum(IR)'*lambda_V;
-
+IR_test = spones(R_test);
 
 % learn an FM model
-[U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test);
+[U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test, IR_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

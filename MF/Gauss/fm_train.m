@@ -1,4 +1,4 @@
-function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test)
+function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test, IR_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
 % function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
@@ -16,9 +16,8 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
     tic;
 %    max_iter = 100;
 
-    IR_test = spones(R_test);
     [m, n] = size(R);
-    l_test = nnz(R_test);
+    nnz_R_test = nnz(R_test);
 
     rand('seed', 0);
 
@@ -28,7 +27,7 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
     nu = 0.1;
     min_step_size = 1e-20;
 
-    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', '#ls', 'obj', '|G|', 'test_loss', '|G_V|', '|G_V|', 'loss');
+    fprintf('%4s  %15s  %3s  %3s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', '#ls', 'obj', '|G|', 'test_loss', '|G_V|', '|G_V|', 'loss');
     for k = 1:max_iter
         if (k == 1)
             B = get_embedding_inner(U, V, IR) - R;
@@ -52,7 +51,7 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
         SS = sum([Su Sv].*[Su Sv])*[U_reg ; V_reg];
         GS = sum(sum(G.*[Su Sv]));
         theta = 1;
-        for ls_steps = 1:1:intmax;
+        for ls_steps = 1:intmax;
             if (theta < min_step_size)
                 fprintf('Warning: step size is too small in line search. Switch to the next block of variables.\n');
                 return;
@@ -72,7 +71,7 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
         end
 
         Y_test_tilde = get_embedding_inner(U,V,IR_test);
-        test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/l_test);
+        test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
         
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*((B.*IR)') U*(B.*IR)];
         G_norm = norm(G,'fro');
@@ -168,7 +167,7 @@ end
 %end
 
 %% (W*Su) ./ (H*Sv)
-%function [Z] = get_embedding_inner(U, V, IR)
+%function [Z] = get_embedding_inner_old(U, V, IR)
 %    [m, n] = size(IR);
 %    nnz_num = nnz(IR);
 %    z_i = {}; z_j = {}; z_val = {};

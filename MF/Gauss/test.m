@@ -10,7 +10,6 @@ tr = 'ratings.dat.tr'; va = 'ratings.dat.va';
 %epsilon = 1e-6;
 epsilon = 1e-5;
 max_iter = 5;
-do_pcond = false;
 
 % prepare training and test data sets
 R = mf_read(tr);
@@ -31,7 +30,7 @@ V_reg = sum(IR)'*lambda_V;
 IR_test = spones(R_test);
 
 % learn an FM model
-[U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test, IR_test);
+[U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, R_test, IR_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

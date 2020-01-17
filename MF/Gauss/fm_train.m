@@ -1,20 +1,16 @@
-function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test, IR_test)
-% Train a factorization machine using the proposed method in the paper below.
-%   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
-% function [w, U, V] = fm_train(y, X, lambda, d, epsilon, do_pcond, sub_rate)
+function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, R_test, IR_test)
+% function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, R_test, IR_test)
 % Inputs:
-%   y: training labels, an l-dimensional binary vector. Each element should be either +1 or -1.
-%   X: training instances. X is an l-by-n matrix if you have l training instances in an n-dimensional feature space.
-%   lambda: the regularization coefficients of the two interaction matrices.
+%   R: rating matrix
+%   IR: each entry is result of indicator function from corresponding R matrix.
+%   U_reg, V_reg: the frequncy-aware regularization coefficients of the two interaction matrices.
 %   d: dimension of the latent space.
 %   epsilon: stopping tolerance in (0,1). Use a larger value if the training time is too long.
-%   do_pcond: a flag. Use 1/0 to enable/disable the diagonal preconditioner.
-%   sub_rate: sampling rate in (0,1] to select instances for the sub-sampled Hessian matrix.
+%   R_test: testing rating matrix
+%   IR_test: each entry is result of indicator function from corresponding R_test matrix.
 % Outputs:
-%   w: linear coefficients. An n-dimensional vector.
 %   U, V: the interaction (d-by-n) matrices.
     tic;
-%    max_iter = 100;
 
     [m, n] = size(R);
     nnz_R_test = nnz(R_test);
@@ -72,7 +68,7 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
 
         Y_test_tilde = get_embedding_inner(U,V,IR_test);
         test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
-        
+
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*((B.*IR)') U*(B.*IR)];
         G_norm = norm(G,'fro');
         GU_norm = norm(G(:, 1:m),'fro');
@@ -128,7 +124,7 @@ function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
         vals(range) = dot( V(:, j_idx(range)) ,Su(:, i_idx(range))) + dot(Sv(:, j_idx(range)),U(:, i_idx(range)));
-    end 
+    end
     Z = sparse(i_idx, j_idx, vals, m, n);
 end
 
@@ -142,108 +138,7 @@ function [Z] = get_embedding_inner(U, V, IR)
     for i = 1: num_batches
         range = (i - 1) * bsize + 1 : min(l, i * bsize);
         vals(range) = dot( V(:, j_idx(range)), U(:, i_idx(range)) );
-    end 
+    end
     Z = sparse(i_idx, j_idx, vals, m, n);
 end
-
-
-%% (H*V')./(W*Su')+(W*U')./(H*Sv')
-%function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
-%    [m, n] = size(IR);
-%    nnz_num = nnz(IR);
-%    z_i = {}; z_j = {}; z_val = {};
-%    parfor j = 1:n
-%        [i_idxs, j_idxs, dummy] = find(IR(:, j));
-%        vals = V(:,j)'*Su(:,i_idxs) + Sv(:,j)'*U(:,i_idxs);
-%        j_idxs(:) = j;
-%        z_i{j} = i_idxs;
-%        z_j{j} = j_idxs;
-%        z_val{j} = vals';
-%    end
-%    Z_i = cat(1, z_i{:});
-%    Z_j = cat(1, z_j{:});
-%    Z_val = cat(1, z_val{:});
-%    Z = sparse(Z_i, Z_j, Z_val, m, n);
-%end
-
-%% (W*Su) ./ (H*Sv)
-%function [Z] = get_embedding_inner_old(U, V, IR)
-%    [m, n] = size(IR);
-%    nnz_num = nnz(IR);
-%    z_i = {}; z_j = {}; z_val = {};
-%    parfor j = 1:n
-%        [i_idxs, j_idxs, dummy] = find(IR(:, j));
-%        vals = V(:,j)'*U(:,i_idxs);
-%        j_idxs(:) = j;
-%        z_i{j} = i_idxs;
-%        z_j{j} = j_idxs;
-%        z_val{j} = vals';
-%    end
-%    Z_i = cat(1, z_i{:});
-%    Z_j = cat(1, z_j{:});
-%    Z_val = cat(1, z_val{:});
-%    Z = sparse(Z_i, Z_j, Z_val, m, n);
-%end
-
-%% (W*Su) ./ (H*Sv)
-%function [Y] = init_Y(W, H, y)
-%    [l, m] = size(W);
-%    [l, n] = size(H);
-%    [wi, wj, wv] = find(W);
-%    [hi, hj, hv] = find(H);
-%    wij = sortrows(cat(2,wi, wj));
-%    hij = sortrows(cat(2,hi, hj));
-%    Y = sparse(wij(:, 2), hij(:, 2), y, m, n);
-%end
-
-%function [Z] = get_cross_embedding_inner_mat_v2(Su, Sv, U, V, IR)
-%    tic;
-%    [m, n] = size(IR);
-%    nnz_num = nnz(IR);
-%    z_i = {}; z_j = {}; z_val = {};
-%    parfor i = 1:m
-%        [i_idxs, j_idxs, vals] = find(IR(i, :));
-%        vals = V(:,j_idxs)'*Su(:,i) + Sv(:,j_idxs)'*U(:,i);
-%        z_i{i} = i_idxs;
-%        z_j{i} = j_idxs;
-%        z_val{i} = vals';
-%    end
-%    Z_i = cat(2, z_i{:});
-%    Z_j = cat(2, z_j{:});
-%    Z_val = cat(2, z_val{:});
-%    Z = sparse(Z_i, Z_j, Z_val, m, n);
-%    fprintf('Time get_cross_embedding_inner_mat %f\n', toc);
-%end
-
-%function [Z] = get_cross_embedding_inner(Su, Sv, U, V, IR)
-%    tic;
-%    [m, n] = size(IR);
-%    nnz_num = nnz(IR);
-%    [i_idxs, j_idxs, vals] = find(IR);
-%    parfor k = 1:nnz_num
-%        i = i_idxs(k);
-%        j = j_idxs(k);
-%        vals(k) = V(:,j)'*Su(:,i) + U(:,i)'*Sv(:,j);
-%    end
-%    Z = sparse(i_idxs, j_idxs, vals, m, n);
-%    fprintf('Time get_cross_embedding_inner %f\n', toc);
-%end
-
-%function [Z] = get_cross_embedding_inner_mat(Su, Sv, U, V, IR)
-%    tic;
-%    [m, n] = size(IR);
-%    nnz_num = nnz(IR);
-%    z_i = []; z_j = []; z_val = [];
-%    for i = 1:m
-%        [dummy, j_idxs, dummy] = find(IR(i, :));
-%        vals = V(:,j_idxs)'*Su(:,i) + Sv(:,j_idxs)'*U(:,i);
-%        i_idxs = j_idxs;
-%        i_idxs(1:end) = i;
-%        z_i = [z_i i_idxs];
-%        z_j = [z_j j_idxs];
-%        z_val = [z_val vals'];
-%    end
-%    Z = sparse(z_i, z_j, z_val, m, n);
-%    fprintf('Time get_cross_embedding_inner_mat %f\n', toc);
-%end
 

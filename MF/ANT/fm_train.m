@@ -1,56 +1,49 @@
-function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, R_test, IR_test)
+function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 % Train a factorization machine using the proposed method in the paper below.
 %   Wei-Sheng Chin, Bo-Wen Yuan, Meng-Yuan Yang, and Chih-Jen Lin, An Efficient Alternating Newton Method for Learning Factorization Machines, Technical Report, 2016.
+% function [U, V] = fm_train(R, U, V, U_reg, V_reg, d, epsilon, max_iter, R_test)
 % Inputs:
-%   y: training labels, an l-dimensional binary vector. Each element should be either +1 or -1.
-%   X: training instances. X is an l-by-n matrix if you have l training instances in an n-dimensional feature space.
-%   lambda_w: the regularization coefficient of linear term.
-%   lambda_U, lambda_V: the regularization coefficients of the two interaction matrices.
+%   R: rating matrix
+%   U_reg, V_reg: the frequncy-aware regularization coefficients of the two interaction matrices.
 %   d: dimension of the latent space.
 %   epsilon: stopping tolerance in (0,1). Use a larger value if the training time is too long.
-%   do_pcond: a flag. Use 1/0 to enable/disable the diagonal preconditioner.
-%   sub_rate: sampling rate in (0,1] to select instances for the sub-sampled Hessian matrix.
+%   R_test: testing rating matrix
+%   U, V: the interaction (d-by-n) matrices.
 % Outputs:
-%   w: linear coefficients. An n-dimensional vector.
 %   U, V: the interaction (d-by-n) matrices.
     tic;
    
     [m, n] = size(R);
     nnz_R_test = nnz(R_test);
 
-    rand('seed', 0);
-
-    U = 2*(0.1/sqrt(d))*(rand(d,m)-0.5);
-    V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
-
     fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|G_U|', 'test_loss', '|G|', 'loss');
     for k = 1:max_iter
         if (k == 1)
-            B = get_embedding_inner(U, V, IR)-R;
+            B = get_embedding_inner(U, V, R)-R;
             loss = 0.5 * full(sum(sum(B .* B)));
             f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
-            GU = U*spdiags(U_reg,0,m,m)+V*((B.*IR)');
-            GV = V*spdiags(V_reg,0,n,n)+U*(B.*IR);
+            GU = U*spdiags(U_reg,0,m,m)+V*B';
+            GV = V*spdiags(V_reg,0,n,n)+U*B;
             G_norm = norm([GU GV]);
             G_norm_0 = G_norm;
             fprintf('initial G_norm: %15.6f\n', G_norm_0);
         end
 
-        [U, B, f, loss, G_norm_U, cg_iters_U] = update_block(U, V, B, IR, GU, f, loss, U_reg, do_pcond);
+        [U, B, f, loss, G_norm_U, cg_iters_U] = update_block(U, V, B, R, GU, f, loss, U_reg);
 
-        Y_test_tilde = get_embedding_inner(U,V,IR_test);
+        Y_test_tilde = get_embedding_inner(U,V,R_test);
         test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
-        GU = U*spdiags(U_reg,0,m,m)+V*((B.*IR)');
-        GV = V*spdiags(V_reg,0,n,n)+U*(B.*IR);
+        GU = U*spdiags(U_reg,0,m,m)+V*B';
+        GV = V*spdiags(V_reg,0,n,n)+U*B;
         G_norm = norm([GU GV]);
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_U, f, G_norm_U, test_loss, G_norm, loss);
 
-        [V, B, f, loss, G_norm_V, cg_iters_V] = update_block(V, U, B', IR', GV, f, loss, V_reg, do_pcond);
+        [V, B, f, loss, G_norm_V, cg_iters_V] = update_block(V, U, B', R', GV, f, loss, V_reg);
         B = B';
-        Y_test_tilde = get_embedding_inner(U,V,IR_test);
+        Y_test_tilde = get_embedding_inner(U,V,R_test);
         test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
-        GU = U*spdiags(U_reg,0,m,m)+V*((B.*IR)');
-        GV = V*spdiags(V_reg,0,n,n)+U*(B.*IR);
+        GU = U*spdiags(U_reg,0,m,m)+V*B';
+        GV = V*spdiags(V_reg,0,n,n)+U*B;
         G_norm = norm([GU GV]);
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, test_loss, G_norm, loss);
 
@@ -62,13 +55,12 @@ function [U, V] = fm_train(R, IR, U_reg, V_reg, d, epsilon, max_iter, do_pcond, 
         fprintf('Warning: reach max training iteration. Terminate training process.\n');
     end
 end
-
-% See Algorithm 3 in the paper.function [U, B, f, loss, G_norm, cg_iters] = update_block(Y, U, V, Q, B, IR, G, f, loss, reg, do_pcond)
-function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, IR, G, f, loss, reg, do_pcond)
+% See Algorithm 3 in the paper.function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, R, G, f, loss, reg)
+function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, R, G, f, loss, reg)
     eta = 0.3;
     cg_max_iter = 20;
 
-    [m, n] = size(IR);
+    [m, n] = size(R);
 
     G_norm = norm(G,'fro');
 
@@ -80,8 +72,8 @@ function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, IR, G, f, los
     cg_iters = 0;
     while (gamma > eta*eta*gamma_0)
         cg_iters = cg_iters+1;
-        Z = get_embedding_inner(D, V, IR);
-        Dh = D*spdiags(reg,0,m,m)+V*((Z.*IR)');
+        Z = get_embedding_inner(D, V, R);
+        Dh = D*spdiags(reg,0,m,m)+V*Z';
         alpha = gamma/sum(sum(D.*Dh));
         Su = Su+alpha*D;
         C = C-alpha*Dh;
@@ -95,7 +87,7 @@ function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, IR, G, f, los
         end
     end
 
-    Delta = get_embedding_inner(Su, V, IR);
+    Delta = get_embedding_inner(Su, V, R);
     B_new = B+Delta;
     USu = sum(U.*Su);
     SuSu = sum(Su.*Su);
@@ -106,10 +98,12 @@ function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, IR, G, f, los
     B = B_new;
     loss = loss_new;
 end
-function [Z] = get_embedding_inner(U, V, IR)
-    [m, n] = size(IR);
-    [i_idx, j_idx, vals] = find(IR);
-    l = nnz(IR);
+%point wise summation
+%z_(m,n) = v_n^T*s_u^m + u_m^T*s_v^n
+function [Z] = get_embedding_inner(U, V, R)
+    [m, n] = size(R);
+    [i_idx, j_idx, vals] = find(R);
+    l = nnz(R);
     num_batches = 10;
     bsize = ceil(l/num_batches);
     for i = 1: num_batches

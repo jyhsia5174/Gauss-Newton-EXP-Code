@@ -1,9 +1,8 @@
 function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
-% function [U, V] = fm_train(R, U, V, U_reg, V_reg, d, epsilon, max_iter, R_test)
+% function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 % Inputs:
 %   R: rating matrix
 %   U_reg, V_reg: the frequncy-aware regularization coefficients of the two interaction matrices.
-%   d: dimension of the latent space.
 %   epsilon: stopping tolerance in (0,1). Use a larger value if the training time is too long.
 %   R_test: testing rating matrix
 %   U, V: the interaction (d-by-n) matrices.

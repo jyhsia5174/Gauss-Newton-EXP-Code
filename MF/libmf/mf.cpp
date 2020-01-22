@@ -1026,6 +1026,7 @@ mf_model* Utility::init_model(mf_int fun,
     model->P = nullptr;
     model->Q = nullptr;
 
+//    mf_float scale = 2 * (mf_float)sqrt(0.1/k_real);
     mf_float scale = (mf_float)sqrt(1.0/k_real);
     default_random_engine generator;
     uniform_real_distribution<mf_float> distribution(0.0, 1.0);
@@ -1051,6 +1052,7 @@ mf_model* Utility::init_model(mf_int fun,
             mf_float * ptr = start_ptr + i*model->k;
             if(counts[static_cast<size_t>(i)] > 0)
                 for(mf_long d = 0; d < k_real; ++d, ++ptr)
+//                    *ptr = (mf_float)( ( distribution(generator) - 0.5)*scale);
                     *ptr = (mf_float)(distribution(generator)*scale);
             else
                 if(fun != P_ROW_BPR_MFOC && fun != P_COL_BPR_MFOC) // unseen for bpr is 0
@@ -2966,6 +2968,7 @@ void fpsg_core(
         threads.emplace_back(&SolverBase::run, solvers[i].get());
     }
 
+    double st = omp_get_wtime(); 
     for(mf_int iter = 0; iter < param.nr_iters; ++iter)
     {
         sched.wait_for_jobs_done();
@@ -3025,6 +3028,8 @@ void fpsg_core(
             }
             cout.width(13);
             cout << fixed << setprecision(4) << scientific << reg+tr_loss;
+            cout.width(10);
+            cout << fixed << setprecision(2) << omp_get_wtime() - st;
             cout << "\n" << flush;
         }
 

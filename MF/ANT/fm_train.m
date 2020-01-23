@@ -31,7 +31,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         [U, B, f, loss, G_norm_U, cg_iters_U] = update_block(U, V, B, R, GU, f, loss, U_reg);
 
         Y_test_tilde = get_embedding_inner(U,V,R_test);
-        test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
         GU = U*spdiags(U_reg,0,m,m)+V*B';
         GV = V*spdiags(V_reg,0,n,n)+U*B;
         G_norm = norm([GU GV]);
@@ -40,7 +40,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         [V, B, f, loss, G_norm_V, cg_iters_V] = update_block(V, U, B', R', GV, f, loss, V_reg);
         B = B';
         Y_test_tilde = get_embedding_inner(U,V,R_test);
-        test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
         GU = U*spdiags(U_reg,0,m,m)+V*B';
         GV = V*spdiags(V_reg,0,n,n)+U*B;
         G_norm = norm([GU GV]);

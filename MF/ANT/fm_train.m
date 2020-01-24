@@ -4,10 +4,10 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 % function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 % Inputs:
 %   R: rating matrix
+%   U, V: the interaction (d-by-n) matrices.
 %   U_reg, V_reg: the frequncy-aware regularization coefficients of the two interaction matrices.
 %   epsilon: stopping tolerance in (0,1). Use a larger value if the training time is too long.
 %   R_test: testing rating matrix
-%   U, V: the interaction (d-by-n) matrices.
 % Outputs:
 %   U, V: the interaction (d-by-n) matrices.
     tic;
@@ -47,7 +47,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters_V, f, G_norm_V, test_loss, G_norm, loss);
 
         if (G_norm <= epsilon*G_norm_0)
-                break;
+            break;
         end
     end
     if (k == max_iter)
@@ -58,11 +58,8 @@ end
 function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, R, G, f, loss, reg)
     eta = 0.3;
     cg_max_iter = 20;
-
     [m, n] = size(R);
-
     G_norm = norm(G,'fro');
-
     Su = zeros(size(G));
     C = -G;
     D = C;
@@ -98,7 +95,7 @@ function [U, B, f, loss, G_norm, cg_iters] = update_block(U, V, B, R, G, f, loss
     loss = loss_new;
 end
 %point wise summation
-%z_(m,n) = v_n^T*s_u^m + u_m^T*s_v^n
+% z_(m,n) = u_m^T*v_n
 function [Z] = get_embedding_inner(U, V, R)
     [m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);

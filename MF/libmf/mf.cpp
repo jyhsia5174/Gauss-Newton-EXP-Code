@@ -1045,15 +1045,20 @@ mf_model* Utility::init_model(mf_int fun,
 
     auto init1 = [&](mf_float *start_ptr, mf_long size, vector<mf_int> counts)
     {
+//        srand(0);        
         memset(start_ptr, 0, static_cast<size_t>(
                     sizeof(mf_float) * size*model->k));
         for(mf_long i = 0; i < size; ++i)
         {
             mf_float * ptr = start_ptr + i*model->k;
             if(counts[static_cast<size_t>(i)] > 0)
-                for(mf_long d = 0; d < k_real; ++d, ++ptr)
+                for(mf_long d = 0; d < k_real; ++d, ++ptr){
 //                    *ptr = (mf_float)( ( distribution(generator) - 0.5)*scale);
                     *ptr = (mf_float)(distribution(generator)*scale);
+//                    float x = (float) rand() / (RAND_MAX+1.0);
+//                    *ptr = (mf_float)(x*scale);
+//                    *ptr = 0.5;
+                }
             else
                 if(fun != P_ROW_BPR_MFOC && fun != P_COL_BPR_MFOC) // unseen for bpr is 0
                     for(mf_long d = 0; d < k_real; ++d, ++ptr)
@@ -1064,6 +1069,7 @@ mf_model* Utility::init_model(mf_int fun,
     init1(model->P, m, omega_p);
     init1(model->Q, n, omega_q);
 
+    mf_int status = mf_save_initial_model(model);
     return model;
 }
 
@@ -2968,6 +2974,8 @@ void fpsg_core(
         threads.emplace_back(&SolverBase::run, solvers[i].get());
     }
 
+//    mf_int status = mf_save_model(model, option.model_path.c_str());
+//    mf_int status = mf_save_initial_model(model);
     double st = omp_get_wtime(); 
     for(mf_int iter = 0; iter < param.nr_iters; ++iter)
     {
@@ -4299,10 +4307,17 @@ mf_problem read_problem(string path)
     mf_long idx = 0;
     for(mf_node N; f >> N.u >> N.v >> N.r;)
     {
+        N.u -= 1;
+        N.v -= 1;
         if(N.u+1 > prob.m)
             prob.m = N.u+1;
         if(N.v+1 > prob.n)
             prob.n = N.v+1;
+//        if(N.u > prob.m)
+//            prob.m = N.u;
+//        if(N.v > prob.n)
+//            prob.n = N.v;
+
         R[idx] = N;
         ++idx;
     }
@@ -4319,27 +4334,27 @@ mf_int mf_save_model(mf_model const *model, char const *path)
     if(!f.is_open())
         return 1;
 
-    f << "f " << model->fun << endl;
+    //f << "f " << model->fun << endl;
     f << "m " << model->m << endl;
     f << "n " << model->n << endl;
-    f << "k " << model->k << endl;
-    f << "b " << model->b << endl;
+    //f << "k " << model->k << endl;
+    //f << "b " << model->b << endl;
 
     auto write = [&] (mf_float *ptr, mf_int size, char prefix)
     {
         for(mf_int i = 0; i < size; ++i)
         {
             mf_float *ptr1 = ptr + (mf_long)i*model->k;
-            f << prefix << i << " ";
+            //f << prefix << i << " ";
             if(isnan(ptr1[0]))
             {
-                f << "F ";
+                //f << "F ";
                 for(mf_int d = 0; d < model->k; ++d)
                     f << 0 << " ";
             }
             else
             {
-                f << "T ";
+               // f << "T ";
                 for(mf_int d = 0; d < model->k; ++d)
                     f << ptr1[d] << " ";
             }
@@ -4356,6 +4371,48 @@ mf_int mf_save_model(mf_model const *model, char const *path)
     return 0;
 }
 
+mf_int mf_save_initial_model(mf_model const *model)
+{
+    ofstream f("initial_model");
+    if(!f.is_open())
+        return 1;
+
+    //f << "f " << model->fun << endl;
+    f << "m " << model->m << endl;
+    f << "n " << model->n << endl;
+    //f << "k " << model->k << endl;
+    //f << "b " << model->b << endl;
+
+    auto write = [&] (mf_float *ptr, mf_int size, char prefix)
+    {
+        for(mf_int i = 0; i < size; ++i)
+        {
+            mf_float *ptr1 = ptr + (mf_long)i*model->k;
+            //f << prefix << i << " ";
+            if(isnan(ptr1[0]))
+            {
+                //f << "F ";
+                for(mf_int d = 0; d < model->k; ++d)
+                    f << 0 << " ";
+            }
+            else
+            {
+               // f << "T ";
+                for(mf_int d = 0; d < model->k; ++d)
+                    f << ptr1[d] << " ";
+            }
+            f << endl;
+        }
+
+    };
+
+    write(model->P, model->m, 'p');
+    write(model->Q, model->n, 'q');
+
+    f.close();
+
+    return 0;
+}
 mf_model* mf_load_model(char const *path)
 {
     ifstream f(path);

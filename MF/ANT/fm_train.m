@@ -101,8 +101,6 @@ end
 function Z = get_embedding_inner(U, V, R)
     [m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);
-    U=single(U);
-    V=single(V);
     l = nnz(R);
     num_batches = 10;
     bsize = ceil(l/num_batches);

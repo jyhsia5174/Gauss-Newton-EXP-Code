@@ -8,7 +8,6 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 %   U, V: the interaction (d-by-n) matrices.
 % Outputs:
 %   U, V: the interaction (d-by-n) matrices.
-    tic;
 
     [m, n] = size(R);
     nnz_R_test = nnz(R_test);
@@ -32,6 +31,8 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
             break;
         end
 
+        time1=tic;
+        G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*B' U*B];
         [Su, Sv, cg_iters] = cg(U, V, R, G, U_reg, V_reg);
 
         Delta_1 = get_cross_embedding_inner(Su, Sv, U, V, R);
@@ -58,6 +59,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
             end
             theta = theta*0.5;
         end
+        time2=toc(time1);
 
         Y_test_tilde = get_embedding_inner(U,V,R_test);
         test_loss = full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test);
@@ -67,7 +69,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         GU_norm = norm(G(:, 1:m),'fro');
         GV_norm = norm(G(:, m+1:end),'fro');
 
-        fprintf('%4d  %15.3f  %3d  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, toc, cg_iters, ls_steps, f, G_norm, test_loss, GU_norm, GV_norm, loss);
+        fprintf('%4d  %15.3f  %3d  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, time2, cg_iters, ls_steps, f, G_norm, test_loss, GU_norm, GV_norm, loss);
     end
     if (k == max_iter)
         fprintf('Warning: reach max training iteration. Terminate training process.\n');
@@ -75,7 +77,6 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
 
 end
 
-% See Algorithm 4 in the paper.
 function [Su, Sv, cg_iters] = cg(U, V, R, G, U_reg, V_reg)
     eta = 0.3;
     cg_max_iter = 20;
@@ -109,7 +110,7 @@ end
 
 %point wise summation
 %z_(m,n) = v_n^T*s_u^m + u_m^T*s_v^n
-function [Z] = get_cross_embedding_inner(Su, Sv, U, V, R)
+function Z = get_cross_embedding_inner(Su, Sv, U, V, R)
     [m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);
     l = nnz(R);
@@ -124,7 +125,7 @@ end
 
 %point wise summation
 % z_(m,n) = u_m^T*v_n
-function [Z] = get_embedding_inner(U, V, R)
+function Z = get_embedding_inner(U, V, R)
     [m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);
     l = nnz(R);

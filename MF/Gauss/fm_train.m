@@ -62,7 +62,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         time2=toc(time1);
 
         Y_test_tilde = get_embedding_inner(U,V,R_test);
-        test_loss = sprt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
 
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*B' U*B];
         G_norm = norm(G,'fro');

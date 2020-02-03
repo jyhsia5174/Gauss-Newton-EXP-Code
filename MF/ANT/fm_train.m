@@ -14,7 +14,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
     [m, n] = size(R);
     nnz_R_test = nnz(R_test);
 
-    fprintf('%4s  %15s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg', 'obj', '|G_U|', '|G_V|', 'test_loss', '|G|', 'loss');
+    fprintf('%4s  %15s  %3s  %3s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg_U', '#cg_V', 'obj', '|G_U|', '|G_V|', 'test_loss', '|G|', 'loss');
     for k = 1:max_iter
         if (k == 1)
             B = get_embedding_inner(U, V, R)-R;
@@ -41,7 +41,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         G_norm = norm([GU GV],'fro');
         G_norm_U = norm(GU,'fro');
         G_norm_V = norm(GV,'fro');
-        fprintf('%4d  %15.3f  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, time2, cg_iters_V, f, G_norm_U, G_norm_V, test_loss, G_norm, loss);
+        fprintf('%4d  %15.3f  %3d  %3d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', k, time2, cg_iters_U, cg_iters_V, f, G_norm_U, G_norm_V, test_loss, G_norm, loss);
 
         if (G_norm <= epsilon*G_norm_0)
             break;

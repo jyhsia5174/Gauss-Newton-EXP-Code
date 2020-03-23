@@ -27,17 +27,17 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, d)
         time1=tic;
         VVT = V*V';
         for i = 1:m
-%                U(:,i) = inv(VVT+U_reg(i)*eye(d))*V*R(i,:)';
-%                U(:,i) = inv(VVT+V*(diag(C(i,:))-eye_n)*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*P(i,:)';
-                U(:,i) = inv(VVT+V*diag(C_minus_I(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
-%                U(:,i) = inv(V*diag(C(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
+            U(:,i) = inv(VVT+U_reg(i)*eye(d))*V*R(i,:)';
+%            U(:,i) = inv(VVT+V*(diag(C(i,:))-eye_n)*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*P(i,:)';
+%            U(:,i) = inv(VVT+V*diag(C_minus_I(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
+%            U(:,i) = inv(V*diag(C(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
         end
         UUT = U*U';
         for i = 1:n
-%                V(:,i) = inv(UUT+V_reg(i)*eye(d))*U*R(:,i);
-%                V(:,i) = inv(UUT+U*(diag(C(:,i))-eye_m)*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*P(:,i);
-                V(:,i) = inv(UUT+U*diag(C_minus_I(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
-%                V(:,i) = inv(U*diag(C(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
+            V(:,i) = inv(UUT+V_reg(i)*eye(d))*U*R(:,i);
+%            V(:,i) = inv(UUT+U*(diag(C(:,i))-eye_m)*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*P(:,i);
+%            V(:,i) = inv(UUT+U*diag(C_minus_I(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
+%            V(:,i) = inv(U*diag(C(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
         end
         time2=toc(time1);
 
@@ -45,9 +45,9 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, d)
         test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
         B = get_embedding_inner(U, V, R)-R;
         loss = 0.5 * full(sum(sum(B .* B)));
-        c_loss = 0.5 * full(sum(sum((B .* B) .* C)));
-%        f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
-        f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+c_loss;
+%        c_loss = 0.5 * full(sum(sum((B .* B) .* C)));
+        f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
+%        f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+c_loss;
         
         fprintf('%4d  %15.3f  %15.3f  %15.6f  %15.3f\n', k, time2, f, test_loss, loss);
     end

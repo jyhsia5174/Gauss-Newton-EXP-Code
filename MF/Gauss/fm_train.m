@@ -62,7 +62,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         time2=toc(time1);
 
         Y_test_tilde = get_embedding_inner(U,V,R_test);
-        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde))))/nnz_R_test);
 
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*B' U*B];
         G_norm = norm(G,'fro');
@@ -111,7 +111,13 @@ end
 %point wise summation
 %z_(m,n) = v_n^T*s_u^m + u_m^T*s_v^n
 function Z = get_cross_embedding_inner(Su, Sv, U, V, R)
-    [m, n] = size(R);
+	
+	Su = single(Su);
+	Sv = single(Sv);
+	U = single(U);
+	V = single(V);
+   
+	[m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);
     l = nnz(R);
     num_batches = 10;
@@ -126,6 +132,8 @@ end
 %point wise summation
 % z_(m,n) = u_m^T*v_n
 function Z = get_embedding_inner(U, V, R)
+	U = single(U);
+	V = single(V);
     [m, n] = size(R);
     [i_idx, j_idx, vals] = find(R);
     l = nnz(R);

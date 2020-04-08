@@ -2957,6 +2957,8 @@ void fpsg_core(
         }
         cout.width(13);
         cout << "obj";
+        cout.width(10);
+        cout << "time";
         cout << "\n";
     }
 

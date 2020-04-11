@@ -3,13 +3,13 @@
 
 % set model parameters
 %lambda_U = 1e-7; lambda_V = 1e-7; d = 4;
-lambda_U = 1e-3; lambda_V = 1e-3; d = 40;
-tr = 'ratings.dat.tr'; va = 'ratings.dat.va';
+lambda_U = 0.05; lambda_V = 0.05; d = 40;
+tr = './../data/ml-1m/ratings.dat.tr'; va = './../data/ml-1m/ratings.dat.va';
 
 % set training algorithm's parameters
 %epsilon = 1e-6;
 epsilon = 1e-5;
-max_iter = 5;
+max_iter = 20;
 
 % prepare training and test data sets
 R = mf_read(tr);
@@ -25,16 +25,16 @@ R_test = sparse(i,j,s,m,n);
 
 %Init freq regularization
 IR = spones(R);
-U_reg = sum(IR')'*lambda_U;
-V_reg = sum(IR)'*lambda_V;
+U_reg = full(sum(IR')'*lambda_U);
+V_reg = full(sum(IR)'*lambda_V);
 
 % learn an FM model
 %rand('seed', 0);
 %U = 2*(0.1/sqrt(d))*(rand(d,m)-0.5);
 %V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
 
-U = dlmread('initial_model_test_P');
-V = dlmread('initial_model_test_Q');
+U = dlmread('initial_model_ml1m_P');
+V = dlmread('initial_model_ml1m_Q');
 
 R = gpuArray(R);
 R_test = gpuArray(R_test);
@@ -44,7 +44,7 @@ V = gpuArray(V');
 %V_reg = gpuArray(V_reg);
 
 
-[U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test);
+[U, V] = fm_train_gpu(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

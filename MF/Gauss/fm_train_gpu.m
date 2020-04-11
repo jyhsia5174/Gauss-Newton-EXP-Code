@@ -35,6 +35,9 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*B' U*B];
         [Su, Sv, cg_iters] = cg(U, V, R, G, U_reg, V_reg);
 
+        Su=gpuArray(Su);
+        Sv=gpuArray(Sv);
+        
         Delta_1 = get_cross_embedding_inner(Su, Sv, U, V, R);
         Delta_2 = get_embedding_inner(Su, Sv, R);
         US_u = sum(U.*Su)*U_reg; VS_v = sum(V.*Sv)*V_reg;
@@ -83,7 +86,7 @@ function [Su, Sv, cg_iters] = cg(U, V, R, G, U_reg, V_reg)
     [m, n] = size(R);
     S = zeros(size(G));
     C = -G;
-    D = C;
+    D = gpuArray(C);
     gamma_0 = sum(sum(C.*C));
     gamma = gamma_0;
     cg_iters = 0;

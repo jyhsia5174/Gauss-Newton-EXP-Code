@@ -598,7 +598,8 @@ mf_float Utility::inner_product(mf_float *p, mf_float *q, mf_int k)
         XMM = _mm_add_ps(XMM, _mm_mul_ps(
                   _mm_load_ps(p+d), _mm_load_ps(q+d)));
     __m128 XMMtmp = _mm_add_ps(XMM, _mm_movehl_ps(XMM, XMM));
-    XMM = _mm_add_ps(XMM, _mm_shuffle_ps(XMMtmp, XMMtmp, 1));
+//    XMM = _mm_add_ps(XMM, _mm_shuffle_ps(XMMtmp, XMMtmp, 1));
+    XMM = _mm_add_ps(XMMtmp, _mm_shuffle_ps(XMMtmp, XMMtmp, 1));
     mf_float product;
     _mm_store_ss(&product, XMM);
     return product;
@@ -660,7 +661,19 @@ mf_double Utility::calc_reg2(mf_model &model,
                 continue;
 
             mf_float *ptr1 = ptr+(mf_long)i*model.k;
-            reg += omega[i]*Utility::inner_product(ptr1, ptr1, model.k);
+//            reg += omega[i]*Utility::inner_product(ptr1, ptr1, model.k);
+  
+            mf_double tpp=0;
+            for(mf_int d=0;d<model.k;++d){
+                mf_double pp = omega[i]*ptr1[d]*ptr1[d];  
+                tpp += pp;
+                reg += pp;
+            }   
+//            cout << i;
+//            cout.width(10);
+//            cout << fixed << setprecision(4) << tpp << endl;
+
+//            reg += Utility::inner_product(ptr1, ptr1, model.k);
         }
 
         return reg;
@@ -1045,7 +1058,7 @@ mf_model* Utility::init_model(mf_int fun,
 
     auto init1 = [&](mf_float *start_ptr, mf_long size, vector<mf_int> counts)
     {
-//        srand(0);        
+        srand(0);        
         memset(start_ptr, 0, static_cast<size_t>(
                     sizeof(mf_float) * size*model->k));
         for(mf_long i = 0; i < size; ++i)
@@ -2900,6 +2913,31 @@ shared_ptr<SolverBase> SolverFactory::get_solver(
     return solver;
 }
 
+mf_double calc_loss(vector<BlockBase*> &blocks, mf_model &model){
+    mf_node *N;
+    mf_float *p;
+    mf_float *q;
+    mf_int k = model.k;
+    mf_double loss = 0;
+    for(mf_int i = 0; i < (mf_long)blocks.size(); ++i){
+        BlockBase* block = blocks[i];
+        block->reload();
+        while(block->move_next())
+        {
+            N = block->get_current();
+            p = model.P+(mf_long)N->u*model.k;
+            q = model.Q+(mf_long)N->v*model.k;
+            mf_double z = 0;
+            for(mf_int d = 0; d < k; ++d)
+                z += p[d]*q[d];
+//            mf_double z = Utility::inner_product(p,q,model.k);
+            z = N->r-z;
+            loss += z*z;
+        }
+    }
+    return loss;
+}
+
 void fpsg_core(
     Utility &util,
     Scheduler &sched,
@@ -2968,6 +3006,28 @@ void fpsg_core(
     vector<shared_ptr<SolverBase>> solvers(param.nr_threads);
     vector<thread> threads;
     threads.reserve(param.nr_threads);
+
+
+/*
+    cout << fixed << setprecision(4) << param.lambda_q2 << endl;
+    for(mf_int i=0;i<model->m;++i){
+        cout << i;
+        cout.width(10);
+         cout << fixed << setprecision(4) << omega_p[i] << endl;
+    }
+*/
+    mf_double init_reg2 = util.calc_reg2(*model, param.lambda_p2,
+                             param.lambda_q2, omega_p, omega_q);
+    cout << "initial reg: ";
+    cout.width(15);
+    cout << fixed << setprecision(4) << 0.5*init_reg2 << endl;
+
+    mf_double init_loss = calc_loss(block_ptrs, *model);
+    cout << "initial loss: ";
+    cout.width(15);
+    cout << fixed << setprecision(4) << 0.5*init_loss << endl;
+
+    double st = omp_get_wtime(); 
     for(mf_int i = 0; i < param.nr_threads; ++i)
     {
         solvers[i] = SolverFactory::get_solver(sched, block_ptrs,
@@ -2978,11 +3038,14 @@ void fpsg_core(
 
 //    mf_int status = mf_save_model(model, option.model_path.c_str());
 //    mf_int status = mf_save_initial_model(model);
-    double st = omp_get_wtime(); 
     for(mf_int iter = 0; iter < param.nr_iters; ++iter)
     {
         sched.wait_for_jobs_done();
 
+//        mf_double cur_loss = calc_loss(block_ptrs, *model);
+//        cout << fixed << setprecision(4) << cur_loss << endl;
+//        cout << fixed << setprecision(4) << sched.get_loss()  << endl;
+        
         if(!param.quiet)
         {
             mf_double reg = 0;
@@ -3037,7 +3100,7 @@ void fpsg_core(
                 cout << fixed << setprecision(4) << va_error;
             }
             cout.width(13);
-            cout << fixed << setprecision(4) << scientific << reg+tr_loss;
+            cout << fixed << setprecision(4) << scientific << 0.5*(reg+tr_loss);
             cout.width(10);
             cout << fixed << setprecision(2) << omp_get_wtime() - st;
             cout << "\n" << flush;
@@ -3132,10 +3195,10 @@ try
     omega_p = vector<mf_int>(tr->m, 0);
     omega_q = vector<mf_int>(tr->n, 0);
 
-    util.shuffle_problem(*tr, p_map, q_map);
-    util.shuffle_problem(*va, p_map, q_map);
-    util.scale_problem(*tr, (mf_float)1.0/scale);
-    util.scale_problem(*va, (mf_float)1.0/scale);
+//    util.shuffle_problem(*tr, p_map, q_map);
+//    util.shuffle_problem(*va, p_map, q_map);
+//    util.scale_problem(*tr, (mf_float)1.0/scale);
+//    util.scale_problem(*va, (mf_float)1.0/scale);
     ptrs = util.grid_problem(*tr, param.nr_bins, omega_p, omega_q, blocks);
 
     model = shared_ptr<mf_model>(Utility::init_model(param.fun,
@@ -3145,9 +3208,11 @@ try
     for(mf_int i = 0; i < (mf_long)blocks.size(); ++i)
         block_ptrs[i] = &blocks[i];
 
+    scale =1;
     fpsg_core(util, sched, tr.get(), va.get(), param, scale,
               block_ptrs, omega_p, omega_q, model, cv_blocks, cv_error);
 
+/*
     if(!param.copy_data)
     {
         util.scale_problem(*tr, scale);
@@ -3159,6 +3224,7 @@ try
     util.scale_model(*model, scale);
     Utility::shrink_model(*model, param.k);
     Utility::shuffle_model(*model, inv_p_map, inv_q_map);
+    */
 }
 catch(exception const &e)
 {
@@ -4375,17 +4441,21 @@ mf_int mf_save_model(mf_model const *model, char const *path)
 
 mf_int mf_save_initial_model(mf_model const *model)
 {
-    ofstream f("initial_model");
-    if(!f.is_open())
+    ofstream fp("initial_model_P");
+    ofstream fq("initial_model_Q");
+    if(!fp.is_open())
+        return 1;
+    
+    if(!fq.is_open())
         return 1;
 
     //f << "f " << model->fun << endl;
-    f << "m " << model->m << endl;
-    f << "n " << model->n << endl;
+//    f << "m " << model->m << endl;
+//    f << "n " << model->n << endl;
     //f << "k " << model->k << endl;
     //f << "b " << model->b << endl;
 
-    auto write = [&] (mf_float *ptr, mf_int size, char prefix)
+    auto write = [&] (ofstream &f, mf_float *ptr, mf_int size, char prefix)
     {
         for(mf_int i = 0; i < size; ++i)
         {
@@ -4408,10 +4478,11 @@ mf_int mf_save_initial_model(mf_model const *model)
 
     };
 
-    write(model->P, model->m, 'p');
-    write(model->Q, model->n, 'q');
+    write(fp, model->P, model->m, 'p');
+    write(fq, model->Q, model->n, 'q');
 
-    f.close();
+    fp.close();
+    fq.close();
 
     return 0;
 }

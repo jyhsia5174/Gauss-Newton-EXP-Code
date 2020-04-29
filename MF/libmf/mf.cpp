@@ -2367,6 +2367,7 @@ void BPRSolver::sg_update(mf_int d_begin, mf_int d_end, __m128 XMMz,
         __m128 XMMq = _mm_load_ps(q+d);
         __m128 XMMw = _mm_load_ps(w+d);
 
+        //g_u
         __m128 XMMpg = _mm_add_ps(_mm_mul_ps(XMMlambda_p2, XMMp),
                        _mm_mul_ps(XMMz, _mm_sub_ps(XMMw, XMMq)));
         __m128 XMMqg = _mm_sub_ps(_mm_mul_ps(XMMlambda_q2, XMMq),
@@ -2374,10 +2375,12 @@ void BPRSolver::sg_update(mf_int d_begin, mf_int d_end, __m128 XMMz,
         __m128 XMMwg = _mm_add_ps(_mm_mul_ps(XMMlambda_q2, XMMw),
                        _mm_mul_ps(XMMz, XMMp));
 
+        //Per-coordinate Schedule (PCS) ADAGRAD
         XMMpG1 = _mm_add_ps(XMMpG1, _mm_mul_ps(XMMpg, XMMpg));
         XMMqG1 = _mm_add_ps(XMMqG1, _mm_mul_ps(XMMqg, XMMqg));
         XMMwG1 = _mm_add_ps(XMMwG1, _mm_mul_ps(XMMwg, XMMwg));
 
+        //p_u <- p_u - eta*g_u;
         XMMp = _mm_sub_ps(XMMp, _mm_mul_ps(XMMeta_p, XMMpg));
         XMMq = _mm_sub_ps(XMMq, _mm_mul_ps(XMMeta_q, XMMqg));
         XMMw = _mm_sub_ps(XMMw, _mm_mul_ps(XMMeta_w, XMMwg));
@@ -3027,7 +3030,8 @@ void fpsg_core(
     cout.width(15);
     cout << fixed << setprecision(4) << 0.5*init_loss << endl;
 
-    double st = omp_get_wtime(); 
+    double accu_time =0;
+//    double st = omp_get_wtime(); 
     for(mf_int i = 0; i < param.nr_threads; ++i)
     {
         solvers[i] = SolverFactory::get_solver(sched, block_ptrs,
@@ -3040,7 +3044,11 @@ void fpsg_core(
 //    mf_int status = mf_save_initial_model(model);
     for(mf_int iter = 0; iter < param.nr_iters; ++iter)
     {
+
+        double st = omp_get_wtime(); 
         sched.wait_for_jobs_done();
+        double ed = omp_get_wtime(); 
+        accu_time += ed-st;
 
 //        mf_double cur_loss = calc_loss(block_ptrs, *model);
 //        cout << fixed << setprecision(4) << cur_loss << endl;
@@ -3053,7 +3061,8 @@ void fpsg_core(
                              param.lambda_q1, omega_p, omega_q);
             mf_double reg2 = util.calc_reg2(*model, param.lambda_p2,
                              param.lambda_q2, omega_p, omega_q);
-            mf_double tr_loss = sched.get_loss();
+//            mf_double tr_loss = sched.get_loss();
+            mf_double tr_loss = calc_loss(block_ptrs, *model);
             mf_double tr_error = sched.get_error()/tr->nnz;
 
             switch(param.fun)
@@ -3102,7 +3111,8 @@ void fpsg_core(
             cout.width(13);
             cout << fixed << setprecision(4) << scientific << 0.5*(reg+tr_loss);
             cout.width(10);
-            cout << fixed << setprecision(2) << omp_get_wtime() - st;
+//            cout << fixed << setprecision(2) << omp_get_wtime() - st;
+            cout << fixed << setprecision(2) << accu_time;
             cout << "\n" << flush;
         }
 
@@ -3201,10 +3211,13 @@ try
 //    util.scale_problem(*va, (mf_float)1.0/scale);
     ptrs = util.grid_problem(*tr, param.nr_bins, omega_p, omega_q, blocks);
 
+
     model = shared_ptr<mf_model>(Utility::init_model(param.fun,
                 tr->m, tr->n, param.k, avg/scale, omega_p, omega_q),
                 [] (mf_model *ptr) { mf_destroy_model(&ptr); });
 
+//    Utility::shuffle_model(*model, inv_p_map, inv_q_map);
+    
     for(mf_int i = 0; i < (mf_long)blocks.size(); ++i)
         block_ptrs[i] = &blocks[i];
 

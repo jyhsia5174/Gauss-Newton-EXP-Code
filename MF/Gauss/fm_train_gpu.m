@@ -24,17 +24,16 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
             B = get_embedding_inner(U, V, R, i_idx_R, j_idx_R) - R;
             loss = 0.5 * full(sum(sum(B .* B)));
             G = [U*spdiags(U_reg,0,m,m) V*spdiags(V_reg,0,n,n)] + [V*B' U*B];
-            f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
+            freq_reg = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg);
+            f = freq_reg+loss;
             G_norm = norm(G,'fro');
             G_norm_0 = G_norm;
             fprintf('initial G_norm: %15.6f\n', G_norm_0);
-            single_U=single(full(U));
-            single_V=single(full(V));
-            fprintf('initial freq reg: %15.6f\n', 0.5*(sum(single_U.*single_U)*single(full(U_reg))+sum(single_V.*single_V)*single(full(V_reg))));
-fprintf('initial loss: %15.6f\n', 0.5 * full(sum(sum(B .* B)))); 
+            fprintf('initial loss: %15.6f\n', loss); 
         end
 
         if (G_norm <= epsilon*G_norm_0)
+            fprintf('Newton stopping condition');
             break;
         end
 

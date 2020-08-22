@@ -3030,8 +3030,8 @@ void fpsg_core(
     cout.width(15);
     cout << fixed << setprecision(4) << 0.5*init_loss << endl;
 
-    double accu_time =0;
-//    double st = omp_get_wtime(); 
+//    double accu_time =0;
+    double st = omp_get_wtime(); 
     for(mf_int i = 0; i < param.nr_threads; ++i)
     {
         solvers[i] = SolverFactory::get_solver(sched, block_ptrs,
@@ -3045,10 +3045,10 @@ void fpsg_core(
     for(mf_int iter = 0; iter < param.nr_iters; ++iter)
     {
 
-        double st = omp_get_wtime(); 
+//        double st = omp_get_wtime(); 
         sched.wait_for_jobs_done();
-        double ed = omp_get_wtime(); 
-        accu_time += ed-st;
+//        double ed = omp_get_wtime(); 
+//        accu_time += ed-st;
 
 //        mf_double cur_loss = calc_loss(block_ptrs, *model);
 //        cout << fixed << setprecision(4) << cur_loss << endl;
@@ -3111,8 +3111,8 @@ void fpsg_core(
             cout.width(13);
             cout << fixed << setprecision(4) << scientific << 0.5*(reg+tr_loss);
             cout.width(10);
-//            cout << fixed << setprecision(2) << omp_get_wtime() - st;
-            cout << fixed << setprecision(2) << accu_time;
+            cout << fixed << setprecision(2) << omp_get_wtime() - st;
+//            cout << fixed << setprecision(2) << accu_time;
             cout << "\n" << flush;
         }
 

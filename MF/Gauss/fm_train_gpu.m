@@ -29,6 +29,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
             G_norm = norm(G,'fro');
             G_norm_0 = G_norm;
             fprintf('initial G_norm: %15.6f\n', G_norm_0);
+            fprintf('initial reg: %15.6f\n', freq_reg);
             fprintf('initial loss: %15.6f\n', loss); 
         end
 

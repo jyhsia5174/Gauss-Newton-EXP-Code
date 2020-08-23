@@ -43,7 +43,7 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
         total_t=total_t+time2;
 
         Y_test_tilde = get_embedding_inner(U,V,R_test, i_idx_R_test, j_idx_R_test);
-        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde))))/nnz_R_test);
         GU = U.*U_reg'+V*B';
         GV = V.*V_reg'+U*B;
         G_norm = norm([GU GV],'fro');
@@ -62,9 +62,9 @@ end
 function [U, B, f, loss, cg_iters] = update_block(U, V, B, R, G, f, loss, reg, option, i_idx_R, j_idx_R)
     eta = 0.3;
     cg_max_iter = 20;
-    Su = zeros(size(G));
+    Su = gpuArray(zeros(size(G)));
     C = -G;
-    D = C;
+    D = gpuArray(C);
     gamma_0 = sum(sum(C.*C));
     gamma = gamma_0;
     cg_iters = 0;
@@ -107,9 +107,11 @@ end
 %point wise summation
 % z_(m,n) = u_m^T*v_n
 function Z = get_embedding_inner(U, V, R, i_idx, j_idx)
+    U = single(U);
+    V = single(V);
     [m, n] = size(R);
     l = nnz(R);
-    vals = zeros(1,l);
+    vals = gpuArray(zeros(1,l));
     num_batches = 10;
     bsize = ceil(l/num_batches);
     for i = 1: num_batches

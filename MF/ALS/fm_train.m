@@ -72,9 +72,9 @@ function U = updata_block(U,V,R,uni_i_idx_R,U_reg,d,m2ns)
     temp = zeros(d,length(uni_i_idx_R));
     parfor i = 1:length(uni_i_idx_R)
         ii = uni_i_idx_R(i);
-        idx=m2ns{ii};
+        idx = m2ns{ii};
         VVT = V(:,idx)*V(:,idx)';
-        temp(:,i) = inv(VVT+U_reg(ii)*eye(d))*V*R(ii,:)';
+        temp(:,i) = linsolve(VVT+U_reg(ii)*eye(d),V*R(ii,:)');
     end
     U(:,uni_i_idx_R) = temp;
 end

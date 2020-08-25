@@ -13,51 +13,52 @@ function [U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, d)
 
     [m, n] = size(R);
     nnz_R_test = nnz(R_test);
-    alpha = 120;
-    IR = spones(R); 
-    P = full(IR);% p_ui = preference of user u to item i
-    C = IR+alpha*R;% conﬁdence in observing p_ui
-    C_minus_I = alpha*R;
-    eye_d = eye(d);
-%    eye_m = eye(m);
-%    eye_n = eye(n);
+    [i_idx_R, j_idx_R, vals_R] = find(R);
+    [i_idx_R_test, j_idx_R_test, vals_R_test] = find(R_test);
+    uni_i_idx_R = unique(i_idx_R);
+    uni_j_idx_R = unique(j_idx_R);   
+    
+    U = U(1:d,:);
+    V = V(1:d,:);
+
+    for i = 1:length(uni_i_idx_R)
+        m2ns{uni_i_idx_R(i)}=find(R(uni_i_idx_R(i),:));
+    end
+
+    for i = 1:length(uni_j_idx_R)
+        n2ms{uni_j_idx_R(i)}=find(R(:,uni_j_idx_R(i))');
+    end
+
+    B = get_embedding_inner(U, V, R, i_idx_R, j_idx_R)-R;
+    loss = 0.5 * full(sum(sum(B .* B)));
+    freq_reg = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg);
+    fprintf('initial reg: %15.6f\n', freq_reg);
+    fprintf('initial loss: %15.6f\n', loss); 
 
     fprintf('%4s  %15s  %15s  %15s  %15s\n', 'iter', 'time', 'obj', 'test_loss', 'loss');
+    total_t=0;
     for k = 1:max_iter
         time1=tic;
-        VVT = V*V';
-        for i = 1:m
-            U(:,i) = inv(VVT+U_reg(i)*eye(d))*V*R(i,:)';
-%            U(:,i) = inv(VVT+V*(diag(C(i,:))-eye_n)*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*P(i,:)';
-%            U(:,i) = inv(VVT+V*diag(C_minus_I(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
-%            U(:,i) = inv(V*diag(C(i,:))*V'+U_reg(i)*eye_d)*V*diag(C(i,:))*R(i,:)';
-        end
-        UUT = U*U';
-        for i = 1:n
-            V(:,i) = inv(UUT+V_reg(i)*eye(d))*U*R(:,i);
-%            V(:,i) = inv(UUT+U*(diag(C(:,i))-eye_m)*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*P(:,i);
-%            V(:,i) = inv(UUT+U*diag(C_minus_I(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
-%            V(:,i) = inv(U*diag(C(:,i))*U'+V_reg(i)*eye_d)*U*diag(C(:,i))*R(:,i);
-        end
+        U = updata_block(U,V,R,uni_i_idx_R,U_reg,d,m2ns);
+        V = updata_block(V,U,R',uni_j_idx_R,V_reg,d,n2ms);
         time2=toc(time1);
+        total_t=total_t+time2;
 
-        Y_test_tilde = get_embedding_inner(U,V,R_test);
-        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde)))/nnz_R_test));
-        B = get_embedding_inner(U, V, R)-R;
+        Y_test_tilde = get_embedding_inner(U,V,R_test,i_idx_R_test, j_idx_R_test);
+        test_loss = sqrt(full(sum(sum((R_test-Y_test_tilde).*(R_test-Y_test_tilde))))/nnz_R_test);
+        B = get_embedding_inner(U, V, R, i_idx_R, j_idx_R)-R;
         loss = 0.5 * full(sum(sum(B .* B)));
-%        c_loss = 0.5 * full(sum(sum((B .* B) .* C)));
         f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+loss;
-%        f = 0.5*(sum(U.*U)*U_reg+sum(V.*V)*V_reg)+c_loss;
         
-        fprintf('%4d  %15.3f  %15.3f  %15.6f  %15.3f\n', k, time2, f, test_loss, loss);
+        fprintf('%4d  %15.3f  %15.3f  %15.6f  %15.3f\n', k, total_t, f, test_loss, loss);
     end
 end
 %point wise summation
 % z_(m,n) = u_m^T*v_n
-function Z = get_embedding_inner(U, V, R)
+function Z = get_embedding_inner(U, V, R, i_idx, j_idx)
     [m, n] = size(R);
-    [i_idx, j_idx, vals] = find(R);
     l = nnz(R);
+    vals = zeros(1,l);
     num_batches = 10;
     bsize = ceil(l/num_batches);
     for i = 1: num_batches
@@ -65,4 +66,15 @@ function Z = get_embedding_inner(U, V, R)
         vals(range) = dot( V(:, j_idx(range)), U(:, i_idx(range)) );
     end
     Z = sparse(i_idx, j_idx, vals, m, n);
+end
+
+function U = updata_block(U,V,R,uni_i_idx_R,U_reg,d,m2ns)
+    temp = zeros(d,length(uni_i_idx_R));
+    parfor i = 1:length(uni_i_idx_R)
+        ii = uni_i_idx_R(i);
+        idx=m2ns{ii};
+        VVT = V(:,idx)*V(:,idx)';
+        temp(:,i) = inv(VVT+U_reg(ii)*eye(d))*V*R(ii,:)';
+    end
+    U(:,uni_i_idx_R) = temp;
 end

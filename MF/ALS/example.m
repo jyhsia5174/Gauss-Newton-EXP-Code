@@ -25,11 +25,13 @@ U_reg = sum(IR')'*lambda_U;
 V_reg = sum(IR)'*lambda_V;
 
 % learn an FM model
-rand('seed', 0);
-U = 2*(0.1/sqrt(d))*(rand(d,m)-0.5);
-V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
+%rand('seed', 0);
+%U = 2*(0.1/sqrt(d))*(rand(d,m)-0.5);
+%V = 2*(0.1/sqrt(d))*(rand(d,n)-0.5);
+U = dlmread('initial_model_P');
+V = dlmread('initial_model_Q');
 
-[U, V] = fm_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test);
+[U, V] = fm_train(R, U', V', U_reg, V_reg, epsilon, max_iter, R_test,d);
 
 % do prediction
 %y_tilde = fm_predict(X_test, w, U, V);

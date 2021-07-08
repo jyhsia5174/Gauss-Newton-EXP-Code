@@ -7,13 +7,19 @@
 
 # binary file
 *.mexa64
+*.o
+mf-predict
+mf-train
 
 # data
 data/*
+tr
+va
 *.tr
 *.va
 *.te
 *.trva
+*.model
 
 # tmp
 *.swp

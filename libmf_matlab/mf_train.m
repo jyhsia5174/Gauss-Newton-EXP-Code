@@ -34,8 +34,77 @@ function [U, V] = mf_train(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, sol
         [U V] = gauss_newton_solver(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, eta, cg_max_iter);
     elseif strcmp(solver, 'alscg')
         [U V] = als_cg_solver(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, eta, cg_max_iter);
+    elseif strcmp(solver, 'als')
+        [U V] = als_solver(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test);
     end
 
+end
+
+function [U V] = als_solver(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test)
+    global get_embedding_inner;
+    [R_i, R_j, vals_R] = find(R);
+    [R_i_test, R_j_test, vals_R_test] = find(R_test);
+    R_idx = [R_i, R_j];
+    R_test_idx = [R_i_test, R_j_test];
+    R_ones = spones(R);
+    
+    total_time = 0;
+    for k = 1:max_iter
+        if (k == 1)
+            B = get_embedding_inner(U, V, R_i, R_j) - R;
+            if(0) % Check initial model
+              print_results(0, 0, {'als', 0, 0}, U, V, R_test, R_test_idx, U_reg, V_reg, B);
+            end
+        end
+
+        G = [U .* U_reg' V .* V_reg'] + [V * B' U * B];
+
+        if (k == 1)
+            G_norm_0 = norm(G, 'fro');
+        elseif (norm(G, 'fro') <= epsilon * G_norm_0)
+            fprintf('Newton stopping condition');
+            break;
+        end
+
+        tic;
+        U = updata_block(U, V, R, R_ones, U_reg);
+        V = updata_block(V, U, R', R_ones', V_reg);
+        total_time = total_time + toc;
+
+        B = get_embedding_inner(U, V, R_i, R_j) - R;
+        print_results(k, total_time, {'als', 0, 0}, U, V, R_test, R_test_idx, U_reg, V_reg, B);
+    end
+
+    if (k == max_iter)
+        fprintf(2, 'Warning: reach max training iteration. Terminate training process.\n');
+    end
+
+end
+
+% VVT = v_i*v_i^T
+function VVT = get_VVT(V, j_idx)
+    l = size(j_idx, 2);
+    VVT = zeros(size(V, 1));
+
+    bsize = 1000;
+    num_batches = ceil(l / bsize);
+
+    for i = 1:num_batches
+        range = (i - 1) * bsize + 1:min(l, i * bsize);
+        VVT = VVT + V(:, j_idx(range)) * V(:, j_idx(range))';
+    end
+end
+
+function U = updata_block(U, V, R, R_ones, U_reg)
+    I = eye(size(U, 1));
+    VR = V*R';
+    for i = 1:size(U, 2)
+        j_idx = find(R(i, :));
+        if (size(j_idx, 2) > 0)
+          VVT = get_VVT(V, j_idx);
+          U(:,i) = linsolve(VVT + U_reg(i)*I, VR(:,i));
+        end
+    end
 end
 
 function [U V] = als_cg_solver(R, U, V, U_reg, V_reg, epsilon, max_iter, R_test, eta, cg_max_iter)
@@ -279,7 +348,7 @@ function [] = print(solver, env)
     elseif strcmp(solver, 'alscg')
         fprintf('%4s  %10s  %5s  %5s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg_U', '#cg_V', 'obj', 'test_loss', '|G|', '|G_U|', '|G_V|', 'loss');
     elseif strcmp(solver, 'als')
-        fprintf('%4s  %10s  %15s  %15s  %15s\n', 'iter', 'time', 'obj', 'test_loss', 'loss');
+        fprintf('%4s  %10s  %5s  %5s  %15s  %15s  %15s  %15s  %15s  %15s\n', 'iter', 'time', '#cg_U', '#cg_V', 'obj', 'test_loss', '|G|', '|G_U|', '|G_V|', 'loss');
     end
 
 end
@@ -309,6 +378,10 @@ function [] = print_results(iter, total_time, iter_info, U, V, R_test, R_test_id
         ls_steps = iter_info{1, 3};
         fprintf('%4d  %10.3f  %5d  %5d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', iter, total_time, cg_iters, ls_steps, f, test_loss, G_norm, GU_norm, GV_norm, loss);
     elseif strcmp(solver, 'alscg')
+        cg_iters_U = iter_info{1, 2};
+        cg_iters_V = iter_info{1, 3};
+        fprintf('%4d  %10.3f  %5d  %5d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', iter, total_time, cg_iters_U, cg_iters_V, f, test_loss, G_norm, GU_norm, GV_norm, loss);
+    elseif strcmp(solver, 'als')
         cg_iters_U = iter_info{1, 2};
         cg_iters_V = iter_info{1, 3};
         fprintf('%4d  %10.3f  %5d  %5d  %15.3f  %15.6f  %15.6f  %15.6f  %15.6f  %15.3f\n', iter, total_time, cg_iters_U, cg_iters_V, f, test_loss, G_norm, GU_norm, GV_norm, loss);

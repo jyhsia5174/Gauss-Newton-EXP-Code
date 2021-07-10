@@ -42,6 +42,8 @@ function run(solver, enable_gpu, l2, d, t, eta, cgt)
     solver = 'gauss';
   elseif (solver == 1)
     solver = 'alscg';
+  elseif (solver == 2)
+    solver = 'als';
   end
 
   % Enable GPU

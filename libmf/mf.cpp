@@ -2982,7 +2982,7 @@ void fpsg_core(
     vector<thread> threads;
     threads.reserve(param.nr_threads);
 
-    if(true){ // (exp) toggle init model check 
+    if(false){ // (exp) toggle init model check 
       mf_double init_reg2 = util.calc_reg2(*model, param.lambda_p2,
                                param.lambda_q2, omega_p, omega_q);
       cerr << "initial reg: ";
@@ -3167,7 +3167,7 @@ try
                 tr->m, tr->n, param.k, avg/scale, omega_p, omega_q),
                 [] (mf_model *ptr) { mf_destroy_model(&ptr); });
 
-    if(true){ // (exp) toggle save model 
+    if(false){ // (exp) toggle save model 
       Utility::shuffle_model(*model, inv_p_map_cp, inv_q_map_cp);
       mf_save_initial_model(model.get());
       Utility::shuffle_model(*model, p_map_cp, q_map_cp); // (exp) shuffle model base

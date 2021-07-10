@@ -26,12 +26,12 @@ while getopts 'nhc:' o; do
           num_proc=${OPTARG}
           ;;
         h | *) 
-          echo './gauss.sh [-n] [-c <num>]' >&2
+          echo './als.sh [-n] [-c <num>]' >&2
           exit 1
     esac
 done
 
-solver=0
+solver=2
 enable_gpu=0
 lambda=(1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3)
 d=40

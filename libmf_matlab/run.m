@@ -4,6 +4,7 @@ function run(solver, enable_gpu, l2, d, t, eta, cgt)
   % solver: 
   %   - 0: gauss
   %   - 1: alscg
+  %   - 2: alscg
   % enable_gpu: 
   %   - 0: disable
   %   - 1: enable

@@ -20,10 +20,14 @@ va
 *.te
 *.trva
 *.model
+*.csv
+*.png
+
+# log
+libmf/log
+libmf_matlab/log
 
 # tmp
 *.swp
-
-# logs
-logs
+.ipynb_checkpoints
 

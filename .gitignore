@@ -20,12 +20,12 @@ va
 *.te
 *.trva
 *.model
-*.csv
+#*.csv
 *.png
 
 # log
-libmf/log
-libmf_matlab/log
+#libmf/log
+#libmf_matlab/log
 
 # tmp
 *.swp

@@ -16,6 +16,9 @@ DFLAG = -DUSESSE
 DFLAG += -DUSEOMP
 CXXFLAGS += $(OMPFLAG)
 
+# Save init model
+# DFLAG += -DSAVEINITMODEL
+
 KERNEL_NAME = $(shell uname -s)
 
 ifeq ($(KERNEL_NAME), Darwin)

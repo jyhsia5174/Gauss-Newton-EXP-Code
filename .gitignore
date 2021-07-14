@@ -21,7 +21,7 @@ va
 *.trva
 *.model
 #*.csv
-*.png
+#*.png
 
 # log
 #libmf/log

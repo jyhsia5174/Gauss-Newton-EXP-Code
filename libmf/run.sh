@@ -20,7 +20,7 @@ done
 lambda=(1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3)
 f=0
 k=40
-t=100
+t=500
 r=0.1
 
 log_dir="log"
@@ -36,6 +36,6 @@ if ${dry_run}; then
   echo "Dry run -c ${num_proc}"
   task
 else
-  echo "Run"
+  echo "Run with ${num_proc} cores."
   task | xargs -0 -d '\n' -P ${num_proc} -I {} sh -c "{}" &
 fi

@@ -2982,7 +2982,8 @@ void fpsg_core(
     vector<thread> threads;
     threads.reserve(param.nr_threads);
 
-    if(false){ // (exp) toggle init model check 
+#ifdef SAVEINITMODEL 
+    { // (exp) toggle init model check 
       mf_double init_reg2 = util.calc_reg2(*model, param.lambda_p2,
                                param.lambda_q2, omega_p, omega_q);
       cerr << "initial reg: ";
@@ -2994,6 +2995,7 @@ void fpsg_core(
       cerr.width(15);
       cerr << fixed << setprecision(4) << 0.5*init_loss << endl;
     }
+#endif
 
     double st = omp_get_wtime(); 
     for(mf_int i = 0; i < param.nr_threads; ++i)
@@ -3167,11 +3169,13 @@ try
                 tr->m, tr->n, param.k, avg/scale, omega_p, omega_q),
                 [] (mf_model *ptr) { mf_destroy_model(&ptr); });
 
-    if(false){ // (exp) toggle save model 
+#ifdef SAVEINITMODEL 
+    { // (exp) toggle save model 
       Utility::shuffle_model(*model, inv_p_map_cp, inv_q_map_cp);
       mf_save_initial_model(model.get());
       Utility::shuffle_model(*model, p_map_cp, q_map_cp); // (exp) shuffle model base
     }
+#endif
 
     for(mf_int i = 0; i < (mf_long)blocks.size(); ++i)
         block_ptrs[i] = &blocks[i];

@@ -43,7 +43,7 @@ then
 else
   enable_gpu=0
 fi
-lambda=(5e-1 5e-2 5e-3)
+lambda=(1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3)
 d=40
 t=100
 eta=0.3

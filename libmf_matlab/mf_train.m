@@ -86,11 +86,11 @@ function VVT = get_VVT(V, j_idx)
     l = size(j_idx, 2);
     VVT = zeros(size(V, 1));
 
-    bsize = 1000;
+    bsize = 8e5;
     num_batches = ceil(l / bsize);
 
     for i = 1:num_batches
-        range = (i - 1) * bsize + 1:min(l, i * bsize);
+        range = ((i - 1) * bsize + 1):min(l, i * bsize);
         VVT = VVT + V(:, j_idx(range)) * V(:, j_idx(range))';
     end
 end
@@ -312,11 +312,11 @@ function Z = get_cross_embedding_inner_gpu(Su, Sv, U, V, i_idx, j_idx)
     l = size(i_idx, 1);
     vals = gpuArray(zeros(1, l));
 
-    num_batches = 10;
-    bsize = ceil(l / num_batches);
+    bsize = 8e5;
+    num_batches = ceil(l / bsize);
 
     for i = 1:num_batches
-        range = (i - 1) * bsize + 1:min(l, i * bsize);
+        range = ((i - 1) * bsize + 1):min(l, i * bsize);
         vals(range) = dot(V(:, j_idx(range)), Su(:, i_idx(range))) + dot(Sv(:, j_idx(range)), U(:, i_idx(range)));
     end
 
@@ -329,11 +329,11 @@ function Z = get_embedding_inner_gpu(U, V, i_idx, j_idx)
     l = size(i_idx, 1);
     vals = gpuArray(zeros(1, l));
 
-    num_batches = 10;
-    bsize = ceil(l / num_batches);
+    bsize = 8e5;
+    num_batches = ceil(l / bsize);
 
     for i = 1:num_batches
-        range = (i - 1) * bsize + 1:min(l, i * bsize);
+        range = ((i - 1) * bsize + 1):min(l, i * bsize);
         vals(range) = dot(V(:, j_idx(range)), U(:, i_idx(range)));
     end
 

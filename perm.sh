@@ -1,7 +1,7 @@
 #!/bin/bash
 
 (
-cd /tmp2/johncreed/Gauss-Newton-EXP-Code/
+cd /home/johncreed/gauss-newton-2020/
 pwd
 chmod a=u -R *
 )

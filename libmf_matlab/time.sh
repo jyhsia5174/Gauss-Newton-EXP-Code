@@ -37,7 +37,6 @@ while getopts 'nhgc:' o; do
     esac
 done
 
-solver=0
 if ${enable_gpu}
 then
   enable_gpu=1
@@ -52,19 +51,35 @@ cgt=20
 
 log_dir="log"
 mkdir -p ${log_dir}
-task(){
+gauss(){
+  solver=0
   for l2 in ${lambda[@]}; do
-      log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}"
-      echo "exec su matlab -c 'matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log} '"
+      log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}_time_1"
+      echo "matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+  done
+}
+
+alscg(){
+  solver=1
+  for l2 in ${lambda[@]}; do
+      log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}_time_1"
+      echo "matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
   done
 }
 
 if ${dry_run}; then
   echo "Dry run -c ${num_proc}"
-  task
+  gauss > task.txt
+  alscg >> task.txt
+  cat task.txt
+  rm task.txt
 else
   echo "Run"
-  task | xargs -0 -d '\n' -P ${num_proc} -I {} sh -c "{}" &
+  gauss > task.txt
+  alscg >> task.txt
+  cat task.txt
+  cat task.txt | xargs -0 -d '\n' -P ${num_proc} -I {} sh -c "{}" &
+  rm task.txt
 fi
 
 wait

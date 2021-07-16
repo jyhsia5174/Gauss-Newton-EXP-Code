@@ -48,10 +48,11 @@ function run(solver, enable_gpu, l2, d, t, eta, cgt)
   end
 
   % Enable GPU
-  if (enable_gpu)
+  if (enable_gpu == 1)
     env = 'gpu';
   else
     env = 'cpu';
+  end
 
   [U, V] = mf_train(R, U', V', U_reg, V_reg, epsilon, t, R_test, solver, env, eta, cgt);
 end

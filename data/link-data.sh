@@ -10,5 +10,5 @@ while getopts 'h' o; do
 done
 
 dir=`readlink -f $1`
-ln -sf ${dir}/ml.te va
-ln -sf ${dir}/ml.tr tr
+ln -sf ${dir}/nf.te va
+ln -sf ${dir}/nf.tr tr

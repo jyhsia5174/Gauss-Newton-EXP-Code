@@ -19,8 +19,8 @@ done
 
 lambda=(5e-1 5e-2 5e-3)
 f=0
-k=40
-t=500
+k=20
+t=1000
 r=0.1
 
 log_dir="log"
@@ -28,7 +28,7 @@ mkdir -p ${log_dir}
 task(){
   for l2 in ${lambda[@]}; do
       log="f_${f}_l2_${l2}_k_${k}_t_${t}_r_${r}_time_1"
-      echo "timeout 1h ./mf-train -l2 ${l2} -f ${f} -k ${k} -t ${t} -r ${r} -p va tr > ${log_dir}/${log}"
+      echo "timeout 2.5h ./mf-train -l2 ${l2} -f ${f} -k ${k} -t ${t} -r ${r} -p va tr > ${log_dir}/${log}"
   done
 }
 

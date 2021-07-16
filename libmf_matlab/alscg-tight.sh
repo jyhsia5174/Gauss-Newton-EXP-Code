@@ -33,19 +33,20 @@ while getopts 'nhc:' o; do
 done
 
 solver=1
-enable_gpu=0
-lambda=(1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3)
-d=40
-t=100
+enable_gpu=1
+lambda=(5e-1 5e-2 5e-3)
+d=20
+t=200
 eta=0.01
 cgt=200
+t_limit='2.5h'
 
 log_dir="log"
 mkdir -p ${log_dir}
 task(){
   for l2 in ${lambda[@]}; do
       log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}"
-      echo "matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+      echo "timeout ${t_limit} matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
   done
 }
 

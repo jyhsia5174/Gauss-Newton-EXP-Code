@@ -55,7 +55,7 @@ gauss(){
   solver=0
   for l2 in ${lambda[@]}; do
       log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}_time_1"
-      echo "matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+      echo "timeout 15m matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
   done
 }
 
@@ -63,7 +63,7 @@ alscg(){
   solver=1
   for l2 in ${lambda[@]}; do
       log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}_time_1"
-      echo "matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+      echo "timeout 15m matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
   done
 }
 

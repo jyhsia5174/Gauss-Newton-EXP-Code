@@ -69,17 +69,39 @@ alscg(){
   done
 }
 
+alscgtight(){
+  solver=1
+  lambda=(5e-1 5e-2 5e-3)
+  eta=0.01
+  cgt=200
+  for l2 in ${lambda[@]}; do
+      log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}"
+      echo "timeout ${t_limit} matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+  done
+}
+
+gausstight(){
+  solver=0
+  lambda=(5e-1 5e-2 5e-3)
+  eta=0.01
+  cgt=200
+  for l2 in ${lambda[@]}; do
+      log="sol_${solver}_gpu_${enable_gpu}_l2_${l2}_d_${d}_t_${t}_eta_${eta}_cgt_${cgt}"
+      echo "timeout ${t_limit} matlab -nodisplay -nosplash -nodesktop -r \"run(${solver}, ${enable_gpu}, ${l2}, ${d}, ${t}, ${eta}, ${cgt}); exit;\" > ${log_dir}/${log}"
+  done
+}
+
+gauss > task.txt
+alscg >> task.txt
+alscgtight >> task.txt
+gausstight >> task.txt
+cat task.txt
+
 if ${dry_run}; then
   echo "Dry run -c ${num_proc}"
-  gauss > task.txt
-  alscg >> task.txt
-  cat task.txt
   rm task.txt
 else
-  echo "Run"
-  gauss > task.txt
-  alscg >> task.txt
-  cat task.txt
+  echo "Run -c ${num_proc}"
   cat task.txt | xargs -0 -d '\n' -P ${num_proc} -I {} sh -c "{}" &
   rm task.txt
 fi

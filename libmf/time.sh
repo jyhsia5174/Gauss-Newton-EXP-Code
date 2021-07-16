@@ -28,7 +28,7 @@ mkdir -p ${log_dir}
 task(){
   for l2 in ${lambda[@]}; do
       log="f_${f}_l2_${l2}_k_${k}_t_${t}_r_${r}_time_1"
-      echo "./mf-train -l2 ${l2} -f ${f} -k ${k} -t ${t} -r ${r} -p va tr > ${log_dir}/${log}"
+      echo "timeout 1h ./mf-train -l2 ${l2} -f ${f} -k ${k} -t ${t} -r ${r} -p va tr > ${log_dir}/${log}"
   done
 }
 

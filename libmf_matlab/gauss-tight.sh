@@ -1,3 +1,4 @@
+#!/bin/bash
 #function run(solver, enable_gpu, l2, d, t, eta, cgt)
 #  % function run(solver, enable_gpu, l2, d, t)
 #  % Inputs:

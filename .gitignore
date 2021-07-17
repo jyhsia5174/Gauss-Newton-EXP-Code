@@ -30,4 +30,5 @@ va
 # tmp
 *.swp
 .ipynb_checkpoints
+*.tmp
 

@@ -17,7 +17,7 @@ DFLAG += -DUSEOMP
 CXXFLAGS += $(OMPFLAG)
 
 # Save init model
-# DFLAG += -DSAVEINITMODEL
+DFLAG += -DSAVEINITMODEL
 
 KERNEL_NAME = $(shell uname -s)
 

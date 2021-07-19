@@ -18,13 +18,18 @@
 # Parse arg
 dry_run=false
 num_proc=1
-while getopts 'nhc:' o; do
+enable_gpu=0
+while getopts 'nhgc:' o; do
     case ${o} in
         n) 
           dry_run=true
           ;;
         c)
           num_proc=${OPTARG}
+          ;;
+        g)
+          echo 'Enable gpu'
+          enable_gpu=1
           ;;
         h | *) 
           echo './alscg.sh [-n] [-c <num>]' >&2
@@ -33,8 +38,7 @@ while getopts 'nhc:' o; do
 done
 
 solver=1
-enable_gpu=0
-lambda=(1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3)
+lambda=(5e-1 5e-2 5e-3)
 d=40
 t=100
 eta=0.01

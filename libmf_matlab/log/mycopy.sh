@@ -1,6 +1,6 @@
 #! /bin/bash
 
-for i in *_time_1
+for i in sol_*
 do
     mv ${i}{,.tmp}
     cp ${i}{.tmp,}

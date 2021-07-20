@@ -2,6 +2,6 @@
 
 for i in sol_*
 do
-    mv ${i}{,.tmp}
-    cp ${i}{.tmp,}
+    mv -f ${i}{,.tmp}
+    cp -f ${i}{.tmp,}
 done
